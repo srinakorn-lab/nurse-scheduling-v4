@@ -4,9 +4,9 @@ import type { Nurse } from './types'
 import { getDefaultNurses } from './nurseDefaults'
 import { THAI_MONTHS } from './constants'
 import { runAutoSchedule, DEFAULT_CONFIG } from './autoSchedule'
-import type { AutoConfig, PrelockEntry, ShiftCode } from './autoSchedule'
+import type { AutoConfig, PrelockEntry, ShiftCode, OHCase, WarningEntry } from './autoSchedule'
 
-export type { ShiftCode, PrelockEntry, AutoConfig }
+export type { ShiftCode, PrelockEntry, AutoConfig, OHCase, WarningEntry }
 
 export interface ScheduleData {
   year: number
@@ -14,7 +14,10 @@ export interface ScheduleData {
   nurses: Nurse[]
   schedule: Record<string, ShiftCode>
   prelocks: PrelockEntry[]
+  ohCases: OHCase[]
   config: AutoConfig
+  warnings: WarningEntry[]
+  carryover: Record<string, ShiftCode>
 }
 
 const SHIFT_CYCLE: ShiftCode[] = ['D', 'N', 'O', 'V', 'T', 'L', '']
@@ -60,8 +63,30 @@ function makeEmpty(dept: string): ScheduleData {
     nurses: getDefaultNurses(dept),
     schedule: {},
     prelocks: [],
+    ohCases: [],
     config: { ...DEFAULT_CONFIG },
+    warnings: [],
+    carryover: {},
   }
+}
+
+// Extract last shift per nurse from a schedule (for carryover)
+function extractLastShifts(
+  schedule: Record<string, ShiftCode>,
+  nurses: Nurse[],
+  days: number,
+): Record<string, ShiftCode> {
+  const result: Record<string, ShiftCode> = {}
+  for (const n of nurses) {
+    for (let d = days; d >= 1; d--) {
+      const s = schedule[`${n.id}-${d}`]
+      if (s && s !== 'O') {
+        result[n.id] = s
+        break
+      }
+    }
+  }
+  return result
 }
 
 export function useSchedule(dept: string) {
@@ -72,9 +97,11 @@ export function useSchedule(dept: string) {
     if (raw) {
       try {
         const parsed = JSON.parse(raw)
-        // backfill new fields
-        if (!parsed.prelocks) parsed.prelocks = []
-        if (!parsed.config)   parsed.config = { ...DEFAULT_CONFIG }
+        if (!parsed.prelocks)  parsed.prelocks  = []
+        if (!parsed.ohCases)   parsed.ohCases   = []
+        if (!parsed.config)    parsed.config    = { ...DEFAULT_CONFIG }
+        if (!parsed.warnings)  parsed.warnings  = []
+        if (!parsed.carryover) parsed.carryover = {}
         setData(parsed); return
       } catch {}
     }
@@ -98,17 +125,24 @@ export function useSchedule(dept: string) {
   const changeMonth = useCallback((year: number, month: number) => {
     setData(prev => {
       if (!prev) return prev
-      // save current month's schedule
-      const key = storageKey(dept) + '_all'
-      const allRaw = localStorage.getItem(key)
+      // compute carryover from current month before switching
+      const days = daysInMonth(prev.year, prev.month)
+      const newCarryover = extractLastShifts(prev.schedule, prev.nurses, days)
+
+      // archive current month schedule
+      const archKey = storageKey(dept) + '_all'
+      const allRaw = localStorage.getItem(archKey)
       const all: Record<string, Record<string, ShiftCode>> = allRaw ? JSON.parse(allRaw) : {}
       all[`${prev.year}-${prev.month}`] = prev.schedule
-      localStorage.setItem(key, JSON.stringify(all))
-      // load or empty new month
+      localStorage.setItem(archKey, JSON.stringify(all))
+
       const next: ScheduleData = {
         ...prev, year, month,
         schedule: all[`${year}-${month}`] ?? {},
         prelocks: [],
+        ohCases: [],
+        warnings: [],
+        carryover: newCarryover,
       }
       localStorage.setItem(storageKey(dept), JSON.stringify(next))
       return next
@@ -142,13 +176,40 @@ export function useSchedule(dept: string) {
     })
   }, [dept])
 
+  const addOHCase = useCallback((opDay: number) => {
+    setData(prev => {
+      if (!prev) return prev
+      const ohCase: OHCase = { id: `oh_${Date.now()}`, opDay }
+      const next = { ...prev, ohCases: [...prev.ohCases, ohCase] }
+      localStorage.setItem(storageKey(dept), JSON.stringify(next))
+      return next
+    })
+  }, [dept])
+
+  const removeOHCase = useCallback((id: string) => {
+    setData(prev => {
+      if (!prev) return prev
+      const next = { ...prev, ohCases: prev.ohCases.filter(c => c.id !== id) }
+      localStorage.setItem(storageKey(dept), JSON.stringify(next))
+      return next
+    })
+  }, [dept])
+
   const autoSchedule = useCallback((): string[] => {
     let report: string[] = []
     setData(prev => {
       if (!prev) return prev
-      const result = runAutoSchedule(prev, prev.prelocks, prev.config)
+      const result = runAutoSchedule(
+        { ...prev, carryover: prev.carryover, ohCases: prev.ohCases },
+        prev.prelocks,
+        prev.config,
+      )
       report = result.report
-      const next = { ...prev, schedule: result.schedule as Record<string, ShiftCode> }
+      const next: ScheduleData = {
+        ...prev,
+        schedule: result.schedule as Record<string, ShiftCode>,
+        warnings: result.warnings,
+      }
       localStorage.setItem(storageKey(dept), JSON.stringify(next))
       return next
     })
@@ -158,7 +219,17 @@ export function useSchedule(dept: string) {
   const clearSchedule = useCallback(() => {
     setData(prev => {
       if (!prev) return prev
-      const next = { ...prev, schedule: {} }
+      const next = { ...prev, schedule: {}, warnings: [] }
+      localStorage.setItem(storageKey(dept), JSON.stringify(next))
+      return next
+    })
+  }, [dept])
+
+  const dismissWarning = useCallback((idx: number) => {
+    setData(prev => {
+      if (!prev) return prev
+      const warnings = prev.warnings.filter((_, i) => i !== idx)
+      const next = { ...prev, warnings }
       localStorage.setItem(storageKey(dept), JSON.stringify(next))
       return next
     })
@@ -166,5 +237,11 @@ export function useSchedule(dept: string) {
 
   const monthLabel = data ? `${THAI_MONTHS[data.month - 1]} ${data.year + 543}` : ''
 
-  return { data, setShift, changeMonth, updateConfig, addPrelock, removePrelock, autoSchedule, clearSchedule, monthLabel }
+  return {
+    data, setShift, changeMonth, updateConfig,
+    addPrelock, removePrelock,
+    addOHCase, removeOHCase,
+    autoSchedule, clearSchedule, dismissWarning,
+    monthLabel,
+  }
 }
