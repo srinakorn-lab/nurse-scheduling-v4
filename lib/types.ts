@@ -6,16 +6,16 @@ export type NursePosition = 'HOD' | 'CNS' | 'RN4' | 'RN3' | 'RN2' | 'RN1' | 'RN0
 export interface Nurse {
   id: string
   name: string
-  nickname: string
   position: NursePosition
   group: NurseGroup
-  department: Department
-  emp_code: string
-  phone: string
-  start_date: string
   active: boolean
-  day_only: boolean
-  sort_order: number
+  order?: number
+  nickname?: string
+  department?: Department
+  emp_code?: string
+  phone?: string
+  start_date?: string
+  day_only?: boolean
   created_at?: string
 }
 
