@@ -56,7 +56,7 @@ export default function Home() {
           {visibleDepts.map(dept => (
             <Link
               key={dept.id}
-              href={`/schedule/${dept.id}`}
+              href={`/schedule/${dept.id.toLowerCase()}`}
               className="group bg-white border border-gray-200 rounded-xl p-5 hover:border-teal-400 hover:shadow-sm transition-all"
             >
               <div className="flex items-start justify-between mb-3">
