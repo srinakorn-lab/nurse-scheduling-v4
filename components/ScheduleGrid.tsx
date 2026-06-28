@@ -2,10 +2,9 @@
 import { useState, useRef, useEffect } from 'react'
 import type { Nurse } from '@/lib/types'
 import {
-  useSchedule, SHIFT_STYLE, daysInMonth, isWeekend, thaiDow, cycleShift,
-  type ShiftCode,
+  useSchedule, SHIFT_STYLE, daysInMonth, isWeekend, thaiDow,
+  type ShiftCode, type PrelockEntry,
 } from '@/lib/scheduleStore'
-import { THAI_MONTHS_SHORT } from '@/lib/constants'
 
 const POSITION_COLOR: Record<string, string> = {
   HOD: 'bg-purple-100 text-purple-700',
@@ -20,150 +19,221 @@ const POSITION_COLOR: Record<string, string> = {
   WC:  'bg-rose-50 text-rose-600',
 }
 
-const ALL_SHIFTS: ShiftCode[] = ['D', 'N', 'S', 'CH', 'O', 'V', 'T', 'L']
+const WORK_SHIFTS: ShiftCode[] = ['D', 'N', 'S', 'CH']
+const ALL_SHIFTS: ShiftCode[]  = ['D', 'N', 'S', 'CH', 'O', 'V', 'T', 'L']
+const LEAVE_SHIFTS: ShiftCode[] = ['V', 'T', 'L', 'O']
 
-function ShiftPicker({
-  current, onSelect, onClose,
-}: { current: ShiftCode; onSelect: (s: ShiftCode) => void; onClose: () => void }) {
+// ── ShiftPicker popup ─────────────────────────────────────────────
+function ShiftPicker({ current, onSelect, onClose }: {
+  current: ShiftCode; onSelect: (s: ShiftCode) => void; onClose: () => void
+}) {
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    function handle(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose()
-    }
-    document.addEventListener('mousedown', handle)
-    return () => document.removeEventListener('mousedown', handle)
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) onClose() }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
   }, [onClose])
 
   return (
-    <div
-      ref={ref}
-      className="absolute z-50 top-full left-1/2 -translate-x-1/2 mt-0.5 bg-white border border-gray-200 rounded-lg shadow-lg p-1.5 flex flex-wrap gap-1 w-36"
-    >
+    <div ref={ref} className="absolute z-50 top-full left-1/2 -translate-x-1/2 mt-0.5 bg-white border border-gray-200 rounded-xl shadow-xl p-1.5 flex flex-wrap gap-1 w-36">
       {ALL_SHIFTS.map(s => {
         const st = SHIFT_STYLE[s]
         return (
-          <button
-            key={s}
-            onClick={() => { onSelect(s); onClose() }}
-            className={`w-9 h-8 rounded text-xs font-bold border transition-all ${
-              s === current ? 'ring-2 ring-teal-400 border-transparent' : 'border-transparent hover:border-gray-300'
-            }`}
-            style={{ background: st.bg, color: st.text }}
-          >
+          <button key={s} onClick={() => { onSelect(s); onClose() }}
+            className={`w-9 h-8 rounded text-xs font-bold border transition-all ${s === current ? 'ring-2 ring-teal-400 border-transparent' : 'border-transparent hover:border-gray-300'}`}
+            style={{ background: st.bg, color: st.text }}>
             {st.label || '–'}
           </button>
         )
       })}
-      <button
-        onClick={() => { onSelect(''); onClose() }}
-        className="w-full h-7 rounded text-xs text-gray-400 hover:bg-gray-50 border border-dashed border-gray-200 mt-0.5"
-      >
+      <button onClick={() => { onSelect(''); onClose() }}
+        className="w-full h-7 rounded text-xs text-gray-400 hover:bg-gray-50 border border-dashed border-gray-200 mt-0.5">
         ล้าง
       </button>
     </div>
   )
 }
 
-function countShifts(schedule: Record<string, ShiftCode>, nurseId: string, days: number) {
-  let work = 0
-  for (let d = 1; d <= days; d++) {
-    const s = schedule[`${nurseId}-${d}`] || ''
-    if (['D', 'N', 'S', 'CH', 'V', 'T', 'L'].includes(s)) work++
+// ── Pre-lock modal ────────────────────────────────────────────────
+function PrelockModal({ nurses, year, month, onAdd, onClose }: {
+  nurses: Nurse[]; year: number; month: number
+  onAdd: (pl: PrelockEntry) => void; onClose: () => void
+}) {
+  const days = daysInMonth(year, month)
+  const [nurseId, setNurseId] = useState(nurses[0]?.id ?? '')
+  const [shift, setShift]     = useState<ShiftCode>('O')
+  const [selDays, setSelDays] = useState<Set<number>>(new Set())
+  const [note, setNote]       = useState('')
+
+  function toggle(d: number) {
+    setSelDays(prev => { const n = new Set(prev); n.has(d) ? n.delete(d) : n.add(d); return n })
   }
-  return work
+
+  function save() {
+    if (!nurseId || !selDays.size) return
+    onAdd({ id: `pl_${Date.now()}`, nurseId, days: [...selDays].sort((a,b)=>a-b), shift, note })
+    onClose()
+  }
+
+  const activeNurses = nurses.filter(n => n.active && n.position !== 'HOD')
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-gray-800">เพิ่มการจอง (Pre-lock)</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">พยาบาล</label>
+            <select value={nurseId} onChange={e => setNurseId(e.target.value)}
+              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400">
+              {activeNurses.map(n => (
+                <option key={n.id} value={n.id}>{n.name} ({n.position})</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">ประเภท</label>
+            <div className="flex gap-1 flex-wrap">
+              {[...LEAVE_SHIFTS, 'D', 'N'].map(s => {
+                const st = SHIFT_STYLE[s as ShiftCode]
+                return (
+                  <button key={s} onClick={() => setShift(s as ShiftCode)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${shift === s ? 'ring-2 ring-teal-400 border-transparent' : 'border-gray-200 hover:border-gray-300'}`}
+                    style={{ background: st.bg, color: st.text }}>
+                    {st.label || s}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">เลือกวัน (คลิกหลายวันได้)</label>
+            <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto">
+              {Array.from({ length: days }, (_, i) => i + 1).map(d => {
+                const dow = new Date(year, month - 1, d).getDay()
+                const wknd = dow === 0 || dow === 6
+                const sel = selDays.has(d)
+                return (
+                  <button key={d} onClick={() => toggle(d)}
+                    className={`w-8 h-8 rounded text-xs font-semibold border transition-all ${sel ? 'bg-teal-500 text-white border-teal-500' : wknd ? 'bg-blue-50 text-blue-600 border-blue-100 hover:border-blue-300' : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-gray-300'}`}>
+                    {d}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">หมายเหตุ (ไม่จำเป็น)</label>
+            <input value={note} onChange={e => setNote(e.target.value)} placeholder="เช่น ลาป่วย, นัดหมอ"
+              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400" />
+          </div>
+        </div>
+
+        <div className="flex gap-2 mt-5">
+          <button onClick={onClose} className="flex-1 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">ยกเลิก</button>
+          <button onClick={save} disabled={!selDays.size}
+            className="flex-1 py-2 text-sm font-semibold text-white bg-teal-600 rounded-lg hover:bg-teal-700 disabled:opacity-40">
+            บันทึก ({selDays.size} วัน)
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
+// ── Work count ─────────────────────────────────────────────────────
+function countWork(schedule: Record<string, ShiftCode>, nurseId: string, days: number) {
+  let c = 0
+  for (let d = 1; d <= days; d++) {
+    if (WORK_SHIFTS.includes(schedule[`${nurseId}-${d}`] as ShiftCode)) c++
+  }
+  return c
+}
+
+// ── Main component ─────────────────────────────────────────────────
 export default function ScheduleGrid({ dept }: { dept: string }) {
-  const { data, setShift, changeMonth, monthLabel } = useSchedule(dept)
+  const { data, setShift, changeMonth, updateConfig, addPrelock, removePrelock, autoSchedule, clearSchedule, monthLabel } = useSchedule(dept)
   const [picker, setPicker] = useState<{ nurseId: string; day: number } | null>(null)
+  const [showPrelock, setShowPrelock] = useState(false)
+  const [toast, setToast] = useState('')
 
-  if (!data) return (
-    <div className="flex items-center justify-center h-64 text-sm text-gray-400">กำลังโหลด...</div>
-  )
+  function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 3000) }
 
-  const { year, month, nurses, schedule } = data
+  if (!data) return <div className="flex items-center justify-center h-64 text-sm text-gray-400">กำลังโหลด...</div>
+
+  const { year, month, nurses, schedule, prelocks, config } = data
   const days = daysInMonth(year, month)
   const activeNurses = nurses.filter(n => n.active)
   const rnNurses = activeNurses.filter(n => n.group === 'RN')
   const pnNurses = activeNurses.filter(n => n.group === 'PN')
 
-  function prevMonth() {
-    if (month === 1) changeMonth(year - 1, 12)
-    else changeMonth(year, month - 1)
-  }
-  function nextMonth() {
-    if (month === 12) changeMonth(year + 1, 1)
-    else changeMonth(year, month + 1)
+  // prelocked days per nurse
+  const prelockDays = new Map<string, Set<number>>()
+  for (const pl of prelocks) {
+    if (!prelockDays.has(pl.nurseId)) prelockDays.set(pl.nurseId, new Set())
+    pl.days.forEach(d => prelockDays.get(pl.nurseId)!.add(d))
   }
 
-  function handleCellClick(nurseId: string, day: number) {
-    if (picker?.nurseId === nurseId && picker?.day === day) {
-      setPicker(null)
-    } else {
-      setPicker({ nurseId, day })
-    }
+  function handleAutoSchedule() {
+    const report = autoSchedule()
+    showToast(report[0] ?? '✓ จัดเสร็จแล้ว')
+  }
+
+  function handleClear() {
+    if (!confirm('ล้างตารางเดือนนี้ทั้งหมด?')) return
+    clearSchedule()
+    showToast('ล้างตารางแล้ว')
   }
 
   function renderRow(nurse: Nurse) {
-    const work = countShifts(schedule, nurse.id, days)
+    const work = countWork(schedule, nurse.id, days)
     const posStyle = POSITION_COLOR[nurse.position] ?? 'bg-gray-100 text-gray-600'
     const isHOD = nurse.position === 'HOD'
+    const plDays = prelockDays.get(nurse.id)
 
     return (
-      <tr key={nurse.id} className="group hover:bg-gray-50/50">
-        {/* Nurse info */}
-        <td className="sticky left-0 z-10 bg-white group-hover:bg-gray-50/50 border-r border-gray-100 px-3 py-1.5 min-w-[180px]">
+      <tr key={nurse.id} className="group hover:bg-gray-50/60">
+        <td className="sticky left-0 z-10 bg-white group-hover:bg-gray-50/60 border-r border-gray-100 px-3 py-1.5 min-w-[180px]">
           <div className="flex items-center gap-1.5">
-            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${posStyle}`}>
-              {nurse.position}
-            </span>
-            <span className={`text-xs ${isHOD ? 'text-gray-400 italic' : 'text-gray-700'}`}>
-              {nurse.name}
-            </span>
+            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${posStyle}`}>{nurse.position}</span>
+            <span className={`text-xs ${isHOD ? 'text-gray-400 italic' : 'text-gray-700'}`}>{nurse.name}</span>
           </div>
         </td>
-        {/* Day cells */}
         {Array.from({ length: days }, (_, i) => {
           const day = i + 1
           const key = `${nurse.id}-${day}`
           const shift = schedule[key] || ''
           const st = SHIFT_STYLE[shift] ?? SHIFT_STYLE['']
           const weekend = isWeekend(year, month, day)
+          const isLocked = plDays?.has(day)
           const isOpen = picker?.nurseId === nurse.id && picker?.day === day
 
           return (
-            <td
-              key={day}
-              className={`relative border-r border-gray-100 p-0 ${weekend ? 'bg-blue-50/30' : ''}`}
-              style={{ width: 32, minWidth: 32 }}
-            >
-              {isHOD ? (
-                <div className="w-8 h-8" />
-              ) : (
+            <td key={day} className={`relative border-r border-gray-100 p-0 ${weekend ? 'bg-blue-50/30' : ''}`} style={{ width: 32, minWidth: 32 }}>
+              {isHOD ? <div className="w-8 h-8" /> : (
                 <button
-                  onClick={() => handleCellClick(nurse.id, day)}
-                  className="w-full h-8 flex items-center justify-center text-[11px] font-bold rounded transition-all hover:ring-2 hover:ring-teal-300"
-                  style={{
-                    background: shift ? st.bg : 'transparent',
-                    color: shift ? st.text : '#d1d5db',
-                  }}
-                >
+                  onClick={() => isOpen ? setPicker(null) : setPicker({ nurseId: nurse.id, day })}
+                  className={`w-full h-8 flex items-center justify-center text-[11px] font-bold rounded transition-all ${isLocked ? 'ring-1 ring-inset ring-teal-400' : 'hover:ring-2 hover:ring-teal-300'}`}
+                  style={{ background: shift ? st.bg : 'transparent', color: shift ? st.text : '#d1d5db' }}>
                   {st.label || '·'}
+                  {isLocked && <span className="absolute top-0.5 right-0.5 w-1 h-1 rounded-full bg-teal-500" />}
                 </button>
               )}
               {isOpen && !isHOD && (
-                <ShiftPicker
-                  current={shift as ShiftCode}
-                  onSelect={s => setShift(nurse.id, day, s)}
-                  onClose={() => setPicker(null)}
-                />
+                <ShiftPicker current={shift as ShiftCode} onSelect={s => setShift(nurse.id, day, s)} onClose={() => setPicker(null)} />
               )}
             </td>
           )
         })}
-        {/* Count */}
         <td className="sticky right-0 bg-white border-l border-gray-100 text-center text-xs font-bold px-2 w-10">
-          <span className={work < 21 ? 'text-red-500' : work > 23 ? 'text-amber-500' : 'text-teal-600'}>
+          <span className={isHOD ? 'text-gray-300' : work < config.workDaysMin ? 'text-red-500' : work > config.workDaysMax ? 'text-amber-500' : 'text-teal-600'}>
             {isHOD ? '–' : work}
           </span>
         </td>
@@ -173,83 +243,140 @@ export default function ScheduleGrid({ dept }: { dept: string }) {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Month nav */}
-      <div className="flex items-center gap-3 px-4 py-2 bg-white border-b border-gray-100">
-        <button onClick={prevMonth} className="p-1.5 rounded hover:bg-gray-100 text-gray-500 transition">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
+      {/* Sub-header: month nav + config + action buttons */}
+      <div className="flex items-center gap-2 px-4 py-2 bg-white border-b border-gray-100 flex-wrap">
+        {/* Month nav */}
+        <button onClick={() => { const m=month===1?12:month-1; const y=month===1?year-1:year; changeMonth(y,m) }} className="p-1.5 rounded hover:bg-gray-100 text-gray-500">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/></svg>
         </button>
-        <span className="text-sm font-semibold text-gray-800 min-w-[140px] text-center">{monthLabel}</span>
-        <button onClick={nextMonth} className="p-1.5 rounded hover:bg-gray-100 text-gray-500 transition">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
+        <span className="text-sm font-semibold text-gray-800 min-w-[130px] text-center">{monthLabel}</span>
+        <button onClick={() => { const m=month===12?1:month+1; const y=month===12?year+1:year; changeMonth(y,m) }} className="p-1.5 rounded hover:bg-gray-100 text-gray-500">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
         </button>
-        <div className="ml-auto flex gap-1 text-[10px]">
-          {ALL_SHIFTS.map(s => {
-            const st = SHIFT_STYLE[s]
-            return st.label ? (
-              <span key={s} className="px-1.5 py-0.5 rounded font-bold" style={{ background: st.bg, color: st.text }}>
-                {st.label}
-              </span>
-            ) : null
-          })}
+
+        <div className="w-px h-5 bg-gray-200 mx-1" />
+
+        {/* RN/PN config */}
+        <div className="flex items-center gap-1 text-xs text-gray-500">
+          <span>RN</span>
+          <span className="text-gray-400">D</span>
+          <input type="number" min={1} max={8} value={config.rnD}
+            onChange={e => updateConfig({ rnD: +e.target.value })}
+            className="w-8 text-center border border-gray-200 rounded text-xs py-0.5 focus:outline-none focus:ring-1 focus:ring-teal-400" />
+          <span className="text-gray-400">N</span>
+          <input type="number" min={1} max={8} value={config.rnN}
+            onChange={e => updateConfig({ rnN: +e.target.value })}
+            className="w-8 text-center border border-gray-200 rounded text-xs py-0.5 focus:outline-none focus:ring-1 focus:ring-teal-400" />
+          <span className="ml-2">PN</span>
+          <span className="text-gray-400">D</span>
+          <input type="number" min={1} max={6} value={config.pnD}
+            onChange={e => updateConfig({ pnD: +e.target.value })}
+            className="w-8 text-center border border-gray-200 rounded text-xs py-0.5 focus:outline-none focus:ring-1 focus:ring-teal-400" />
+          <span className="text-gray-400">N</span>
+          <input type="number" min={1} max={6} value={config.pnN}
+            onChange={e => updateConfig({ pnN: +e.target.value })}
+            className="w-8 text-center border border-gray-200 rounded text-xs py-0.5 focus:outline-none focus:ring-1 focus:ring-teal-400" />
+          <span className="ml-2 text-gray-400">เป้า</span>
+          <input type="number" min={18} max={26} value={config.workDaysMin}
+            onChange={e => updateConfig({ workDaysMin: +e.target.value })}
+            className="w-8 text-center border border-gray-200 rounded text-xs py-0.5 focus:outline-none focus:ring-1 focus:ring-teal-400" />
+          <span className="text-gray-400">–</span>
+          <input type="number" min={18} max={26} value={config.workDaysMax}
+            onChange={e => updateConfig({ workDaysMax: +e.target.value })}
+            className="w-8 text-center border border-gray-200 rounded text-xs py-0.5 focus:outline-none focus:ring-1 focus:ring-teal-400" />
+        </div>
+
+        <div className="ml-auto flex items-center gap-2">
+          {/* Pre-lock button */}
+          <button onClick={() => setShowPrelock(true)}
+            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+            <span>🔒</span> Pre-lock {prelocks.length > 0 && <span className="bg-teal-500 text-white text-[10px] rounded-full px-1.5">{prelocks.length}</span>}
+          </button>
+          {/* Auto-schedule */}
+          <button onClick={handleAutoSchedule}
+            className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-white bg-teal-600 rounded-lg hover:bg-teal-700 transition shadow-sm">
+            ⚡ จัดเวรเดือนนี้
+          </button>
+          {/* Clear */}
+          <button onClick={handleClear}
+            className="px-3 py-1.5 text-xs text-gray-400 hover:text-red-500 border border-gray-200 rounded-lg hover:border-red-200 transition">
+            ล้าง
+          </button>
         </div>
       </div>
+
+      {/* Shift legend */}
+      <div className="flex items-center gap-1 px-4 py-1 bg-gray-50 border-b border-gray-100">
+        {ALL_SHIFTS.map(s => {
+          const st = SHIFT_STYLE[s]
+          return st.label ? (
+            <span key={s} className="px-1.5 py-0.5 rounded text-[10px] font-bold" style={{ background: st.bg, color: st.text }}>{st.label}</span>
+          ) : null
+        })}
+        <span className="ml-auto text-[10px] text-gray-400">คลิกช่องเพื่อเลือกเวร · 🔵 = จองแล้ว</span>
+      </div>
+
+      {/* Pre-lock list */}
+      {prelocks.length > 0 && (
+        <div className="px-4 py-2 bg-teal-50 border-b border-teal-100 flex flex-wrap gap-2">
+          {prelocks.map(pl => {
+            const nurse = nurses.find(n => n.id === pl.nurseId)
+            const st = SHIFT_STYLE[pl.shift]
+            return (
+              <div key={pl.id} className="flex items-center gap-1.5 bg-white border border-teal-200 rounded-lg px-2 py-1 text-xs">
+                <span className="font-medium text-gray-700">{nurse?.name.split(' ')[0]}</span>
+                <span className="px-1 rounded font-bold text-[10px]" style={{ background: st.bg, color: st.text }}>{st.label || pl.shift}</span>
+                <span className="text-gray-500">วันที่ {pl.days.join(', ')}</span>
+                {pl.note && <span className="text-gray-400">({pl.note})</span>}
+                <button onClick={() => removePrelock(pl.id)} className="text-gray-300 hover:text-red-400 ml-1">✕</button>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Toast */}
+      {toast && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-gray-800 text-white text-sm px-4 py-2 rounded-xl shadow-lg">
+          {toast}
+        </div>
+      )}
 
       {/* Grid */}
       <div className="flex-1 overflow-auto">
         <table className="border-collapse text-xs" style={{ tableLayout: 'fixed' }}>
           <thead className="sticky top-0 z-20 bg-white">
             <tr>
-              <th className="sticky left-0 z-30 bg-white border-b border-r border-gray-200 px-3 py-1 text-left text-[11px] text-gray-500 font-medium min-w-[180px]">
-                พยาบาล
-              </th>
+              <th className="sticky left-0 z-30 bg-white border-b border-r border-gray-200 px-3 py-1.5 text-left text-[11px] text-gray-500 font-medium min-w-[180px]">พยาบาล</th>
               {Array.from({ length: days }, (_, i) => {
                 const d = i + 1
-                const dow = thaiDow(year, month, d)
                 const weekend = isWeekend(year, month, d)
                 return (
-                  <th
-                    key={d}
-                    className={`border-b border-r border-gray-200 py-1 text-center ${weekend ? 'bg-blue-50' : 'bg-white'}`}
-                    style={{ width: 32, minWidth: 32 }}
-                  >
-                    <div className={`text-[9px] ${weekend ? 'text-blue-400' : 'text-gray-400'}`}>{dow}</div>
+                  <th key={d} className={`border-b border-r border-gray-200 py-1 text-center ${weekend ? 'bg-blue-50' : 'bg-white'}`} style={{ width: 32, minWidth: 32 }}>
+                    <div className={`text-[9px] ${weekend ? 'text-blue-400' : 'text-gray-400'}`}>{thaiDow(year, month, d)}</div>
                     <div className={`text-[11px] font-semibold ${weekend ? 'text-blue-600' : 'text-gray-700'}`}>{d}</div>
                   </th>
                 )
               })}
-              <th className="sticky right-0 z-30 bg-white border-b border-l border-gray-200 w-10 text-center text-[11px] text-gray-500 font-medium px-1">
-                วัน
-              </th>
+              <th className="sticky right-0 z-30 bg-white border-b border-l border-gray-200 w-10 text-center text-[11px] text-gray-500 font-medium px-1">วัน</th>
             </tr>
           </thead>
           <tbody>
-            {/* RN section */}
             {rnNurses.length > 0 && (
-              <tr>
-                <td colSpan={days + 2} className="bg-gray-50 px-3 py-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wide border-b border-gray-100">
-                  RN — พยาบาลวิชาชีพ ({rnNurses.length} คน)
-                </td>
-              </tr>
+              <tr><td colSpan={days + 2} className="bg-gray-50 px-3 py-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wide border-b border-gray-100">
+                RN · พยาบาลวิชาชีพ ({rnNurses.length} คน)
+              </td></tr>
             )}
             {rnNurses.map(renderRow)}
-            {/* PN section */}
             {pnNurses.length > 0 && (
-              <tr>
-                <td colSpan={days + 2} className="bg-gray-50 px-3 py-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wide border-b border-t border-gray-100">
-                  PN — พยาบาลเทคนิค ({pnNurses.length} คน)
-                </td>
-              </tr>
+              <tr><td colSpan={days + 2} className="bg-gray-50 px-3 py-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wide border-b border-t border-gray-100">
+                PN · พยาบาลเทคนิค ({pnNurses.length} คน)
+              </td></tr>
             )}
             {pnNurses.map(renderRow)}
-            {/* Day summary row */}
+            {/* Day summary */}
             <tr className="bg-gray-50 border-t border-gray-200">
-              <td className="sticky left-0 bg-gray-50 border-r border-gray-200 px-3 py-1 text-[10px] font-semibold text-gray-500">
-                รวม D / N
-              </td>
+              <td className="sticky left-0 bg-gray-50 border-r border-gray-200 px-3 py-1 text-[10px] font-semibold text-gray-500">รวม D / N</td>
               {Array.from({ length: days }, (_, i) => {
                 const d = i + 1
                 const dCount = activeNurses.filter(n => n.position !== 'HOD' && schedule[`${n.id}-${d}`] === 'D').length
@@ -266,6 +393,15 @@ export default function ScheduleGrid({ dept }: { dept: string }) {
           </tbody>
         </table>
       </div>
+
+      {/* Pre-lock modal */}
+      {showPrelock && (
+        <PrelockModal
+          nurses={nurses} year={year} month={month}
+          onAdd={pl => { addPrelock(pl); setShowPrelock(false) }}
+          onClose={() => setShowPrelock(false)}
+        />
+      )}
     </div>
   )
 }
