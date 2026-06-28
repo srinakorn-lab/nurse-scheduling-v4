@@ -98,9 +98,18 @@ export default function Home() {
                 <tbody className="divide-y divide-gray-100">
                   {[
                     { u: 'admin', dept: 'ทุกแผนก', role: 'Admin',   pass: 'admin1234' },
-                    { u: 'ccu',   dept: 'CCU',     role: 'Ward HOD', pass: 'CCU' },
-                    { u: 'ncu',   dept: 'NCU',     role: 'Ward HOD', pass: 'NCU' },
-                    { u: 'icu',   dept: 'ICU',     role: 'Ward HOD', pass: 'ICU' },
+                    { u: 'ccu',   dept: 'CCU',     role: 'Ward', pass: 'CCU' },
+                    { u: 'ncu',   dept: 'NCU',     role: 'Ward', pass: 'NCU' },
+                    { u: 'icu',   dept: 'ICU',     role: 'Ward', pass: 'ICU' },
+                    { u: 'w5a',   dept: 'W.5A',    role: 'Ward', pass: 'W5A' },
+                    { u: 'w6a',   dept: 'W.6A',    role: 'Ward', pass: 'W6A' },
+                    { u: 'w6b',   dept: 'W.6B',    role: 'Ward', pass: 'W6B' },
+                    { u: 'w7a',   dept: 'W.7A',    role: 'Ward', pass: 'W7A' },
+                    { u: 'w8a',   dept: 'W.8A',    role: 'Ward', pass: 'W8A' },
+                    { u: 'w9a',   dept: 'W.9A',    role: 'Ward', pass: 'W9A' },
+                    { u: 'w10a',  dept: 'W.10A',   role: 'Ward', pass: 'W10A' },
+                    { u: 'w11a',  dept: 'W.11A',   role: 'Ward', pass: 'W11A' },
+                    { u: 'w12a',  dept: 'W.12A',   role: 'Ward', pass: 'W12A' },
                   ].map(row => (
                     <tr key={row.u} className="hover:bg-gray-50">
                       <td className="px-4 py-3 font-mono text-gray-800">{row.u}</td>
