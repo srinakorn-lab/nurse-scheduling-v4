@@ -470,6 +470,34 @@ export default function ScheduleGrid({ dept }: { dept: string }) {
     )
   }
 
+  // Day-summary rows (D/N/O per day) for one group (RN or PN)
+  function renderDaySummary(roster: Nurse[], tag: string, dTarget: (d: number) => number, nTarget: (d: number) => number) {
+    const ros = roster.filter(n => n.position !== 'HOD')
+    const defs = [
+      { key: 'D', label: 'D เวรเช้า', need: '≥', shifts: ['D', 'S'] as ShiftCode[], cls: 'text-blue-600',   tgt: dTarget },
+      { key: 'N', label: 'N เวรดึก',  need: '≥', shifts: ['N'] as ShiftCode[],      cls: 'text-purple-600', tgt: nTarget },
+      { key: 'O', label: 'O หยุด/วัน', need: '',  shifts: ['O'] as ShiftCode[],      cls: 'text-gray-500',   tgt: null as null | ((d: number) => number) },
+    ]
+    return defs.map((row, ri) => (
+      <tr key={`${tag}-${ri}`} className={`bg-gray-50 ${ri === 0 ? 'border-t-2 border-gray-300' : ''}`}>
+        <td className="sticky left-0 z-10 bg-gray-50 border-r border-gray-200 px-3 py-0.5 text-[10px] font-semibold text-gray-500">
+          <span className="text-gray-400">{tag}</span> · {row.label}
+        </td>
+        {Array.from({ length: days }, (_, i) => {
+          const d = i + 1
+          const cnt = ros.filter(n => row.shifts.includes(schedule[`${n.id}-${d}`] as ShiftCode)).length
+          const short = row.tgt != null && cnt < row.tgt(d)
+          return (
+            <td key={d} className={`border-r border-gray-200 text-center py-0.5 text-[10px] font-bold ${short ? 'bg-red-100' : ''}`} style={{ width: 32 }}>
+              <span className={short ? 'text-red-600' : row.cls}>{cnt || ''}</span>
+            </td>
+          )
+        })}
+        <td colSpan={SUMMARY_COLS.length} className="bg-gray-50 border-l border-gray-200" />
+      </tr>
+    ))
+  }
+
   return (
     <div className="flex flex-col h-full">
       {/* Sub-header */}
@@ -628,39 +656,24 @@ export default function ScheduleGrid({ dept }: { dept: string }) {
               </td></tr>
             )}
             {rnNurses.map(renderRow)}
+            {/* RN day summary */}
+            {rnNurses.length > 0 && renderDaySummary(
+              rnNurses, 'RN',
+              d => config.rnD + (ohDayMap.has(d) ? 1 : 0),
+              d => config.rnN + (ohDayMap.has(d) ? 1 : 0),
+            )}
             {pnNurses.length > 0 && (
               <tr><td colSpan={days + 1 + SUMMARY_COLS.length} className="bg-gray-50 px-3 py-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wide border-b border-t border-gray-100">
                 PN · พยาบาลเทคนิค ({pnNurses.length} คน)
               </td></tr>
             )}
             {pnNurses.map(renderRow)}
-            {/* Day summary: D / N / O per day — แยก RN (บน) / PN (ล่าง) */}
-            {([
-              { label: 'D เวรเช้า', shifts: ['D', 'S'] as ShiftCode[], cls: 'text-blue-600' },
-              { label: 'N เวรดึก',  shifts: ['N'] as ShiftCode[],      cls: 'text-purple-600' },
-              { label: 'O หยุด',    shifts: ['O'] as ShiftCode[],      cls: 'text-gray-500' },
-            ]).map((row, ri) => {
-              const rnRoster = rnNurses.filter(n => n.position !== 'HOD')
-              return (
-                <tr key={ri} className={`bg-gray-50 ${ri === 0 ? 'border-t-2 border-gray-300' : ''}`}>
-                  <td className="sticky left-0 bg-gray-50 border-r border-gray-200 px-3 py-0.5 text-[10px] font-semibold text-gray-500">
-                    {row.label} <span className="text-gray-400 font-normal">RN/PN</span>
-                  </td>
-                  {Array.from({ length: days }, (_, i) => {
-                    const d = i + 1
-                    const rnCnt = rnRoster.filter(n => row.shifts.includes(schedule[`${n.id}-${d}`] as ShiftCode)).length
-                    const pnCnt = pnNurses.filter(n => row.shifts.includes(schedule[`${n.id}-${d}`] as ShiftCode)).length
-                    return (
-                      <td key={d} className="border-r border-gray-200 text-center py-0.5 leading-tight" style={{ width: 32 }}>
-                        <div className={`text-[10px] font-bold ${row.cls}`}>{rnCnt || ''}</div>
-                        <div className="text-[9px] font-semibold text-orange-400">{pnCnt || ''}</div>
-                      </td>
-                    )
-                  })}
-                  <td colSpan={SUMMARY_COLS.length} className="bg-gray-50 border-l border-gray-200" />
-                </tr>
-              )
-            })}
+            {/* PN day summary */}
+            {pnNurses.length > 0 && renderDaySummary(
+              pnNurses, 'PN',
+              () => config.pnD,
+              () => config.pnN,
+            )}
           </tbody>
         </table>
       </div>
