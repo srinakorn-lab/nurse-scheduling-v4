@@ -634,24 +634,33 @@ export default function ScheduleGrid({ dept }: { dept: string }) {
               </td></tr>
             )}
             {pnNurses.map(renderRow)}
-            {/* Day summary: D / N / O per day */}
+            {/* Day summary: D / N / O per day — แยก RN (บน) / PN (ล่าง) */}
             {([
               { label: 'D เวรเช้า', shifts: ['D', 'S'] as ShiftCode[], cls: 'text-blue-600' },
               { label: 'N เวรดึก',  shifts: ['N'] as ShiftCode[],      cls: 'text-purple-600' },
               { label: 'O หยุด',    shifts: ['O'] as ShiftCode[],      cls: 'text-gray-500' },
-            ]).map((row, ri) => (
-              <tr key={ri} className={`bg-gray-50 ${ri === 0 ? 'border-t-2 border-gray-300' : ''}`}>
-                <td className="sticky left-0 bg-gray-50 border-r border-gray-200 px-3 py-0.5 text-[10px] font-semibold text-gray-500">{row.label}</td>
-                {Array.from({ length: days }, (_, i) => {
-                  const d = i + 1
-                  const cnt = activeNurses.filter(n => n.position !== 'HOD' && row.shifts.includes(schedule[`${n.id}-${d}`] as ShiftCode)).length
-                  return (
-                    <td key={d} className={`border-r border-gray-200 text-center py-0.5 text-[10px] font-bold ${row.cls}`} style={{ width: 32 }}>{cnt || ''}</td>
-                  )
-                })}
-                <td colSpan={SUMMARY_COLS.length} className="bg-gray-50 border-l border-gray-200" />
-              </tr>
-            ))}
+            ]).map((row, ri) => {
+              const rnRoster = rnNurses.filter(n => n.position !== 'HOD')
+              return (
+                <tr key={ri} className={`bg-gray-50 ${ri === 0 ? 'border-t-2 border-gray-300' : ''}`}>
+                  <td className="sticky left-0 bg-gray-50 border-r border-gray-200 px-3 py-0.5 text-[10px] font-semibold text-gray-500">
+                    {row.label} <span className="text-gray-400 font-normal">RN/PN</span>
+                  </td>
+                  {Array.from({ length: days }, (_, i) => {
+                    const d = i + 1
+                    const rnCnt = rnRoster.filter(n => row.shifts.includes(schedule[`${n.id}-${d}`] as ShiftCode)).length
+                    const pnCnt = pnNurses.filter(n => row.shifts.includes(schedule[`${n.id}-${d}`] as ShiftCode)).length
+                    return (
+                      <td key={d} className="border-r border-gray-200 text-center py-0.5 leading-tight" style={{ width: 32 }}>
+                        <div className={`text-[10px] font-bold ${row.cls}`}>{rnCnt || ''}</div>
+                        <div className="text-[9px] font-semibold text-orange-400">{pnCnt || ''}</div>
+                      </td>
+                    )
+                  })}
+                  <td colSpan={SUMMARY_COLS.length} className="bg-gray-50 border-l border-gray-200" />
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>

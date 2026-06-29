@@ -35,7 +35,7 @@ export interface OHCase {
 export interface WarningEntry {
   day?: number
   nurseId?: string
-  type: 'senior_short' | 'coverage_short' | 'over_consec' | 'oh_short' | 'role_short'
+  type: 'senior_short' | 'coverage_short' | 'over_consec' | 'oh_short' | 'role_short' | 'over_cap'
   msg: string
   severity: 'crit' | 'warn'
 }
@@ -356,6 +356,34 @@ export function runAutoSchedule(
     }
   }
 
+  // Pass 13.5: Fill D & N to target on EVERY day (coverage priority)
+  //   phase 1 → candidates under the work-day cap
+  //   phase 2 → allow exceeding cap so N=4/D=4 is guaranteed (Hard Rules still enforced via hardOk)
+  for (let d = 1; d <= days; d++) {
+    for (const shift of ['D', 'N'] as ShiftCode[]) {
+      const pool   = shift === 'D' ? rnDPool : rnReg
+      const target = shift === 'D' ? effRnD(d) : effRnN(d)
+      let cur = countOnDay(sc, pool, d, shift)
+      if (cur >= target) continue
+      for (const allowOverCap of [false, true]) {
+        if (cur >= target) break
+        const cands = pool.filter(n =>
+          getS(sc, n.id, d) === 'O' &&
+          !isPrelock(n.id, d) &&
+          hardOk(n, d, shift) &&
+          (allowOverCap || workCount(sc, n.id, days) < cfg.workDaysMax),
+        ).sort((a, b) => {
+          const sa = shiftCount(sc, a.id, shift, days), sb = shiftCount(sc, b.id, shift, days)
+          return sa !== sb ? sa - sb : workCount(sc, a.id, days) - workCount(sc, b.id, days)
+        })
+        for (const n of cands) {
+          if (cur >= target) break
+          setS(sc, n.id, d, shift); cur++
+        }
+      }
+    }
+  }
+
   // Pass 14: N-balance swap — equalize N-shift distribution
   const nWorkers = [...rnReg, ...pnReg]
   for (let iter = 0; iter < 3; iter++) {
@@ -433,6 +461,19 @@ export function runAutoSchedule(
         })
         break
       }
+    }
+  }
+
+  // Over-cap (> workDaysMax) — เกิดจากการการันตี N/D coverage → ต้อง Approve
+  for (const n of allWorkers) {
+    const wc = workCount(sc, n.id, days)
+    if (wc > cfg.workDaysMax) {
+      warnings.push({
+        nurseId: n.id,
+        type: 'over_cap',
+        msg: `${n.name.split(' ')[0]}: ทำงาน ${wc} วัน (เกิน ${cfg.workDaysMax}) ⚠ ต้อง Approve`,
+        severity: 'crit',
+      })
     }
   }
 
