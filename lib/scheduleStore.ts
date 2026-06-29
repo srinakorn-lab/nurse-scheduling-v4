@@ -235,6 +235,54 @@ export function useSchedule(dept: string) {
     })
   }, [dept])
 
+  // ── Staff management ─────────────────────────────────────────
+  const addNurse = useCallback((nurse: Omit<Nurse, 'id' | 'order'>) => {
+    setData(prev => {
+      if (!prev) return prev
+      const maxOrder = Math.max(0, ...prev.nurses.filter(n => n.group === nurse.group).map(n => n.order ?? 0))
+      const newNurse: Nurse = { ...nurse, id: `N${Date.now()}`, order: maxOrder + 1 }
+      const next = { ...prev, nurses: [...prev.nurses, newNurse] }
+      localStorage.setItem(storageKey(dept), JSON.stringify(next))
+      return next
+    })
+  }, [dept])
+
+  const updateNurse = useCallback((id: string, patch: Partial<Nurse>) => {
+    setData(prev => {
+      if (!prev) return prev
+      const nurses = prev.nurses.map(n => n.id === id ? { ...n, ...patch } : n)
+      const next = { ...prev, nurses }
+      localStorage.setItem(storageKey(dept), JSON.stringify(next))
+      return next
+    })
+  }, [dept])
+
+  const removeNurse = useCallback((id: string) => {
+    setData(prev => {
+      if (!prev) return prev
+      const nurses = prev.nurses.filter(n => n.id !== id)
+      // clean up this nurse's schedule cells
+      const schedule: Record<string, ShiftCode> = {}
+      for (const [k, v] of Object.entries(prev.schedule)) {
+        if (!k.startsWith(`${id}-`)) schedule[k] = v
+      }
+      const prelocks = prev.prelocks.filter(p => p.nurseId !== id)
+      const next = { ...prev, nurses, schedule, prelocks }
+      localStorage.setItem(storageKey(dept), JSON.stringify(next))
+      return next
+    })
+  }, [dept])
+
+  const toggleNurseActive = useCallback((id: string) => {
+    setData(prev => {
+      if (!prev) return prev
+      const nurses = prev.nurses.map(n => n.id === id ? { ...n, active: !n.active } : n)
+      const next = { ...prev, nurses }
+      localStorage.setItem(storageKey(dept), JSON.stringify(next))
+      return next
+    })
+  }, [dept])
+
   const monthLabel = data ? `${THAI_MONTHS[data.month - 1]} ${data.year + 543}` : ''
 
   return {
@@ -242,6 +290,7 @@ export function useSchedule(dept: string) {
     addPrelock, removePrelock,
     addOHCase, removeOHCase,
     autoSchedule, clearSchedule, dismissWarning,
+    addNurse, updateNurse, removeNurse, toggleNurseActive,
     monthLabel,
   }
 }

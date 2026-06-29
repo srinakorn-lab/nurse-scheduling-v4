@@ -158,6 +158,16 @@ export function runAutoSchedule(
   const pnAll    = nurses.filter(n => n.active && n.group === 'PN')
   const pnReg    = pnAll.filter(n => !n.day_only)
 
+  // OH boost: surgery day (Day0) + next day (Day1) need +1 RN on both D and N
+  const ohBoostDays = new Set<number>()
+  for (const c of ohCases) {
+    for (const d of [c.opDay, c.opDay + 1]) {
+      if (d >= 1 && d <= days) ohBoostDays.add(d)
+    }
+  }
+  const effRnD = (d: number) => cfg.rnD + (ohBoostDays.has(d) ? 1 : 0)
+  const effRnN = (d: number) => cfg.rnN + (ohBoostDays.has(d) ? 1 : 0)
+
   // Pass 3: Co-nurse weekends → O
   for (const n of rnCo) {
     for (let d = 1; d <= days; d++) {
@@ -173,21 +183,21 @@ export function runAutoSchedule(
   for (let d = 1; d <= days; d++) {
     // RN-D
     let curRnD = countOnDay(sc, rnDPool, d, 'D')
-    if (curRnD < cfg.rnD) {
+    if (curRnD < effRnD(d)) {
       const cands = rnDPool.filter(n => avail(n, d) && hardOk(n, d, 'D'))
         .sort((a, b) => {
           const sa = consecWork(sc, a.id, d - 1), sb = consecWork(sc, b.id, d - 1)
           return sa !== sb ? sa - sb : workCount(sc, a.id, days) - workCount(sc, b.id, days)
         })
       for (const n of cands) {
-        if (curRnD >= cfg.rnD) break
+        if (curRnD >= effRnD(d)) break
         setS(sc, n.id, d, 'D'); curRnD++
       }
     }
 
     // RN-N
     let curRnN = countOnDay(sc, rnReg, d, 'N')
-    if (curRnN < cfg.rnN) {
+    if (curRnN < effRnN(d)) {
       const cands = rnReg.filter(n => avail(n, d) && hardOk(n, d, 'N') && workCount(sc, n.id, days) < cfg.workDaysMax)
         .sort((a, b) => {
           const defA = rnNTarget - shiftCount(sc, a.id, 'N', days)
@@ -195,7 +205,7 @@ export function runAutoSchedule(
           return defA !== defB ? defB - defA : consecWork(sc, b.id, d - 1) - consecWork(sc, a.id, d - 1)
         })
       for (const n of cands) {
-        if (curRnN >= cfg.rnN) break
+        if (curRnN >= effRnN(d)) break
         setS(sc, n.id, d, 'N'); curRnN++
       }
     }
@@ -233,8 +243,6 @@ export function runAutoSchedule(
     const ohReqs: Array<{ d: number; minOH: number }> = [
       { d: opDay,     minOH: 2 },
       { d: opDay + 1, minOH: 1 },
-      { d: opDay + 2, minOH: 1 },
-      { d: opDay + 3, minOH: 1 },
     ].filter(r => r.d >= 1 && r.d <= days)
 
     for (const { d, minOH } of ohReqs) {
@@ -316,7 +324,7 @@ export function runAutoSchedule(
       if (!avail(n, d)) continue
       if (isWeekend(year, month, d)) { setS(sc, n.id, d, 'O'); continue }
       const curD = countOnDay(sc, rnDPool, d, 'D')
-      setS(sc, n.id, d, curD >= cfg.rnD ? 'CH' : 'D')
+      setS(sc, n.id, d, curD >= effRnD(d) ? 'CH' : 'D')
     }
   }
 
@@ -339,7 +347,7 @@ export function runAutoSchedule(
       for (let d = 1; d <= days; d++) {
         if (workCount(sc, u.id, days) >= cfg.workDaysMin) break
         if (getS(sc, u.id, d) !== 'O') continue
-        const shift: ShiftCode = countOnDay(sc, rnDPool, d, 'D') < cfg.rnD ? 'D' : 'N'
+        const shift: ShiftCode = countOnDay(sc, rnDPool, d, 'D') < effRnD(d) ? 'D' : 'N'
         if (!hardOk(u, d, shift)) continue
         setS(sc, u.id, d, shift)
       }
@@ -383,11 +391,12 @@ export function runAutoSchedule(
   for (let d = 1; d <= days; d++) {
     const rnDCount = countOnDay(sc, rnDPool, d, 'D')
     const rnNCount = countOnDay(sc, rnReg,   d, 'N')
-    if (rnDCount < cfg.rnD) {
-      warnings.push({ day: d, type: 'coverage_short', msg: `วันที่ ${d} D: RN ขาด (${rnDCount}/${cfg.rnD})`, severity: 'crit' })
+    const oh = ohBoostDays.has(d) ? ' (OH+1)' : ''
+    if (rnDCount < effRnD(d)) {
+      warnings.push({ day: d, type: 'coverage_short', msg: `วันที่ ${d} D: RN ขาด (${rnDCount}/${effRnD(d)})${oh}`, severity: 'crit' })
     }
-    if (rnNCount < cfg.rnN) {
-      warnings.push({ day: d, type: 'coverage_short', msg: `วันที่ ${d} N: RN ขาด (${rnNCount}/${cfg.rnN})`, severity: 'warn' })
+    if (rnNCount < effRnN(d)) {
+      warnings.push({ day: d, type: 'coverage_short', msg: `วันที่ ${d} N: RN ขาด (${rnNCount}/${effRnN(d)})${oh}`, severity: 'warn' })
     }
   }
 

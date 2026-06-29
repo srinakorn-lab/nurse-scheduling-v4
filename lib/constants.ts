@@ -1,4 +1,16 @@
-import type { DeptConfig, ShiftType } from './types'
+import type { DeptConfig, ShiftType, NursePosition, NurseGroup } from './types'
+
+export const POSITIONS: { value: NursePosition; label: string; icon: string; group: NurseGroup }[] = [
+  { value: 'CNS', label: 'CNS',        icon: '⭐', group: 'RN' },
+  { value: 'RN4', label: 'RN4',        icon: '🔵', group: 'RN' },
+  { value: 'RN3', label: 'RN3',        icon: '🔵', group: 'RN' },
+  { value: 'RN2', label: 'RN2',        icon: '🟦', group: 'RN' },
+  { value: 'RN1', label: 'RN1',        icon: '⬜', group: 'RN' },
+  { value: 'RN0', label: 'RN0',        icon: '⬜', group: 'RN' },
+  { value: 'CO',  label: 'Co-nurse',   icon: '🟢', group: 'RN' },
+  { value: 'PN',  label: 'PN',         icon: '🟠', group: 'PN' },
+  { value: 'WC',  label: 'ผู้ช่วย WC', icon: '🌸', group: 'PN' },
+]
 
 export const DEPT_LIST: DeptConfig[] = [
   { id: 'CCU', name: 'CCU', fullName: 'วิกฤตหัวใจ',   type: 'ICU',  beds: 6,  hasOH: true  },

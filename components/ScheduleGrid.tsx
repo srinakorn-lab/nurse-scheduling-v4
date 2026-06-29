@@ -5,6 +5,8 @@ import {
   useSchedule, SHIFT_STYLE, daysInMonth, isWeekend, thaiDow,
   type ShiftCode, type PrelockEntry, type WarningEntry,
 } from '@/lib/scheduleStore'
+import { exportExcel, exportPDF } from '@/lib/exportSchedule'
+import StaffModal from './StaffModal'
 
 const POSITION_COLOR: Record<string, string> = {
   HOD: 'bg-purple-100 text-purple-700',
@@ -173,7 +175,7 @@ function OHModal({ year, month, onAdd, onClose }: {
             })}
           </div>
           <div className="mt-3 p-2 bg-red-50 rounded-lg text-xs text-red-600">
-            Day 0 ({opDay}): ≥2 OH-capable · Day 1-3 ({opDay+1}–{Math.min(opDay+3, days)}): ≥1 OH-capable
+            Day 0 (วันที่ {opDay}) + Day 1 (วันที่ {Math.min(opDay+1, days)}): เพิ่มกำลัง D และ N อีก 1 คน · Day 0 ต้องมี OH-capable ≥2
           </div>
         </div>
         <div className="flex gap-2 mt-4">
@@ -188,47 +190,42 @@ function OHModal({ year, month, onAdd, onClose }: {
   )
 }
 
-// ── Warning panel ────────────────────────────────────────────────
-function WarningPanel({ warnings, onDismiss }: {
+// ── Warning panel (รายการตรวจสอบ) ────────────────────────────────
+function WarningPanel({ warnings, onDismiss, onGoToDay }: {
   warnings: WarningEntry[]
   onDismiss: (idx: number) => void
+  onGoToDay: (day: number) => void
 }) {
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(true)
   if (warnings.length === 0) return null
 
   const crits = warnings.filter(w => w.severity === 'crit').length
   const warns = warnings.filter(w => w.severity === 'warn').length
 
   return (
-    <div className="border-t border-gray-100 bg-white flex-shrink-0">
+    <div className="border-t border-gray-200 bg-white flex-shrink-0 max-h-56 flex flex-col">
       <button
         onClick={() => setExpanded(e => !e)}
-        className="w-full flex items-center gap-2 px-4 py-2 text-xs hover:bg-gray-50 transition">
-        {crits > 0 && (
-          <span className="flex items-center gap-1 text-red-600 font-semibold">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-            {crits} สำคัญ
-          </span>
-        )}
-        {warns > 0 && (
-          <span className="flex items-center gap-1 text-amber-600 font-semibold">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-            {warns} แจ้งเตือน
-          </span>
-        )}
-        <span className="text-gray-400 ml-auto">{expanded ? '▲ ซ่อน' : '▼ ดูคำเตือน'}</span>
+        className="w-full flex items-center gap-2 px-4 py-2 text-xs hover:bg-gray-50 transition flex-shrink-0">
+        <span className="font-semibold text-gray-700">รายการตรวจสอบ ({warnings.length})</span>
+        {crits > 0 && <span className="flex items-center gap-1 text-red-600 font-semibold"><span className="w-1.5 h-1.5 rounded-full bg-red-500" />{crits} สำคัญ</span>}
+        {warns > 0 && <span className="flex items-center gap-1 text-amber-600 font-semibold"><span className="w-1.5 h-1.5 rounded-full bg-amber-400" />{warns} แจ้งเตือน</span>}
+        <span className="text-gray-400 ml-auto">{expanded ? '▲ ซ่อน' : '▼ แสดง'}</span>
       </button>
       {expanded && (
-        <div className="px-4 pb-3 flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
+        <div className="overflow-y-auto divide-y divide-gray-50">
           {warnings.map((w, i) => (
-            <div key={i}
-              className={`flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs border ${
-                w.severity === 'crit'
-                  ? 'bg-red-50 border-red-200 text-red-700'
-                  : 'bg-amber-50 border-amber-200 text-amber-700'
-              }`}>
-              <span>{w.msg}</span>
-              <button onClick={() => onDismiss(i)} className="opacity-40 hover:opacity-100 ml-1">✕</button>
+            <div key={i} className="flex items-center gap-2 px-4 py-1.5 text-xs hover:bg-gray-50">
+              <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${w.severity === 'crit' ? 'bg-red-500' : 'bg-amber-400'}`} />
+              <span className="text-gray-700">{w.msg}</span>
+              <div className="ml-auto flex items-center gap-1 flex-shrink-0">
+                {w.day != null && (
+                  <button onClick={() => onGoToDay(w.day!)}
+                    className="px-2 py-0.5 text-[11px] text-gray-500 border border-gray-200 rounded hover:bg-gray-100">ดูวัน {w.day}</button>
+                )}
+                <button onClick={() => onDismiss(i)}
+                  className="px-2 py-0.5 text-[11px] text-gray-500 border border-gray-200 rounded hover:bg-gray-100">รับทราบ</button>
+              </div>
             </div>
           ))}
         </div>
@@ -237,7 +234,88 @@ function WarningPanel({ warnings, onDismiss }: {
   )
 }
 
-// ── Work count ─────────────────────────────────────────────────────
+// ── Auto-schedule confirm dialog ─────────────────────────────────
+function AutoConfirmModal({ monthLabel, config, ohCount, onConfirm, onClose }: {
+  monthLabel: string
+  config: { rnD: number; rnN: number; pnD: number; pnN: number; workDaysMin: number; workDaysMax: number; tgtOff: number }
+  ohCount: number
+  onConfirm: () => void; onClose: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+        <div className="flex flex-col items-center text-center">
+          <div className="w-14 h-14 rounded-full border-2 border-teal-200 flex items-center justify-center text-2xl text-teal-400 mb-3">⚡</div>
+          <h3 className="text-lg font-bold text-gray-800 mb-4">จัดเวรอัตโนมัติ — เดือนนี้</h3>
+        </div>
+        <div className="bg-gray-50 rounded-xl px-4 py-3 text-sm text-gray-600 space-y-1 mb-4">
+          <div>เดือน: <b className="text-gray-800">{monthLabel}</b></div>
+          <div>เป้าหมาย/คน: ทำงาน <b className="text-gray-800">{config.workDaysMin}–{config.workDaysMax}</b> วัน (เท่าๆ กัน · priority 1)</div>
+          <div>หยุด ~ <b className="text-gray-800">{config.tgtOff}</b> วัน</div>
+          <div>RN: D=<b className="text-gray-800">{config.rnD}</b> N=<b className="text-gray-800">{config.rnN}</b> · PN: D=<b className="text-gray-800">{config.pnD}</b> N=<b className="text-gray-800">{config.pnN}</b></div>
+          {ohCount > 0 && <div className="text-red-500">OH {ohCount} เคส: Day0–1 เพิ่มกำลัง D,N อีก 1 คน</div>}
+        </div>
+        <ul className="text-xs text-gray-400 space-y-1 mb-5 pl-1">
+          <li>• เวรที่ล็อก / Pre-lock / วันลา → คงไว้</li>
+          <li>• Co-nurse: D ก่อน, ช เสริมในวันธรรมดาที่เหลือ</li>
+          <li>• ทุกเวรต้องมี Senior (CNS/RN3+) อย่างน้อย 1</li>
+          <li>• ผลแสดงในตารางพร้อมรายการตรวจสอบ</li>
+        </ul>
+        <div className="flex gap-2 justify-center">
+          <button onClick={() => { onConfirm(); onClose() }}
+            className="px-8 py-2.5 text-sm font-bold text-white bg-teal-600 rounded-xl hover:bg-teal-700">เริ่มจัด</button>
+          <button onClick={onClose}
+            className="px-8 py-2.5 text-sm font-semibold text-gray-500 bg-gray-200 rounded-xl hover:bg-gray-300">ยกเลิก</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Rules / policy panel (กฎและนโยบาย) ───────────────────────────
+function RulesPanel() {
+  const [open, setOpen] = useState(false)
+  const hard = [
+    '🔴 ห้าม N → D/ช วันถัดไป (S → D/ช อนุญาต) · ข้ามเดือนด้วย',
+    'ทุกเวรต้องมี Senior (CNS/RN3+) อย่างน้อย 1 คน',
+    'HOD ไม่ขึ้นเวร · Co-nurse ห้าม N/S · เปมิกา/D-only ขึ้นได้เฉพาะ D',
+    'ทำงานติดกัน ≤ 6 วัน',
+    'OH Day0: RN3+ ≥ 2 คน/เวร · Day0–1 เพิ่มกำลัง D,N อีก 1 คน',
+  ]
+  const soft = [
+    'เป้าหมาย 21–23 วัน/คน/เดือน (priority 1 · เท่าๆ กัน)',
+    'ทำติด 6 วัน — เตือน · ≥7 วัน — ต้อง Approve',
+    'N เวรดึก กระจายให้ใกล้เคียงกัน (ต่างกัน ≤ 2 เวร)',
+    'Pre-lock: เวร/วันลาที่จองไว้ ระบบคงไว้เสมอ',
+  ]
+  return (
+    <div className="border-t border-gray-100 bg-white flex-shrink-0">
+      <button onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-2 px-4 py-2 text-xs text-gray-600 hover:bg-gray-50 transition">
+        <span className="text-gray-400">{open ? '▼' : '▶'}</span>
+        <span className="font-semibold">กฎและนโยบาย (Hard / Soft Rules)</span>
+      </button>
+      {open && (
+        <div className="px-4 pb-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="bg-red-50/50 rounded-lg p-3">
+            <div className="text-[11px] font-bold text-red-600 mb-1.5">Hard Rules — บังคับ</div>
+            <ul className="text-[11px] text-gray-600 space-y-1 leading-relaxed">
+              {hard.map((r, i) => <li key={i}>• {r}</li>)}
+            </ul>
+          </div>
+          <div className="bg-teal-50/50 rounded-lg p-3">
+            <div className="text-[11px] font-bold text-teal-600 mb-1.5">Soft Rules — ปรับได้</div>
+            <ul className="text-[11px] text-gray-600 space-y-1 leading-relaxed">
+              {soft.map((r, i) => <li key={i}>• {r}</li>)}
+            </ul>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Work count + per-nurse stats ───────────────────────────────────
 function countWork(schedule: Record<string, ShiftCode>, nurseId: string, days: number) {
   let c = 0
   for (let d = 1; d <= days; d++) {
@@ -246,6 +324,17 @@ function countWork(schedule: Record<string, ShiftCode>, nurseId: string, days: n
   return c
 }
 
+function statsOf(schedule: Record<string, ShiftCode>, nurseId: string, days: number) {
+  const c = { D: 0, N: 0, S: 0, CH: 0, O: 0, V: 0, T: 0, L: 0 } as Record<string, number>
+  for (let d = 1; d <= days; d++) {
+    const s = schedule[`${nurseId}-${d}`]
+    if (s && s in c) c[s]++
+  }
+  return { D: c.D, N: c.N, S: c.S, CH: c.CH, O: c.O, leave: c.V + c.T + c.L, work: c.D + c.N + c.S + c.CH }
+}
+
+const SUMMARY_COLS = ['D', 'N', 'S', 'ช', 'O', 'ลา', 'รวม']
+
 // ── Main component ─────────────────────────────────────────────────
 export default function ScheduleGrid({ dept }: { dept: string }) {
   const {
@@ -253,15 +342,24 @@ export default function ScheduleGrid({ dept }: { dept: string }) {
     addPrelock, removePrelock,
     addOHCase, removeOHCase,
     autoSchedule, clearSchedule, dismissWarning,
+    addNurse, updateNurse, removeNurse, toggleNurseActive,
     monthLabel,
   } = useSchedule(dept)
 
   const [picker, setPicker]       = useState<{ nurseId: string; day: number } | null>(null)
   const [showPrelock, setShowPrelock] = useState(false)
   const [showOH, setShowOH]       = useState(false)
+  const [showStaff, setShowStaff] = useState(false)
+  const [showAutoConfirm, setShowAutoConfirm] = useState(false)
   const [toast, setToast]         = useState('')
+  const gridRef = useRef<HTMLDivElement>(null)
 
   const isCCU = dept === 'CCU'
+
+  function goToDay(day: number) {
+    if (!gridRef.current) return
+    gridRef.current.scrollTo({ left: 180 + (day - 1) * 32 - 120, behavior: 'smooth' })
+  }
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 3500) }
 
@@ -279,15 +377,11 @@ export default function ScheduleGrid({ dept }: { dept: string }) {
     pl.days.forEach(d => prelockDays.get(pl.nurseId)!.add(d))
   }
 
-  // OH highlight: which days are OH days (Day0 = red, Day1-3 = orange)
-  const ohDayMap = new Map<number, 'day0' | 'day1-3'>()
+  // OH highlight: Day0 (ผ่าตัด) + Day1 (วันถัดไป) — บูสต์กำลัง D,N อีก 1 คน
+  const ohDayMap = new Map<number, 'day0' | 'day1'>()
   for (const c of ohCases) {
     ohDayMap.set(c.opDay, 'day0')
-    for (let i = 1; i <= 3; i++) {
-      if (c.opDay + i <= days && !ohDayMap.has(c.opDay + i)) {
-        ohDayMap.set(c.opDay + i, 'day1-3')
-      }
-    }
+    if (c.opDay + 1 <= days && !ohDayMap.has(c.opDay + 1)) ohDayMap.set(c.opDay + 1, 'day1')
   }
 
   function handleAutoSchedule() {
@@ -327,7 +421,7 @@ export default function ScheduleGrid({ dept }: { dept: string }) {
 
           return (
             <td key={day}
-              className={`relative border-r border-gray-100 p-0 ${weekend ? 'bg-blue-50/30' : ohType === 'day0' ? 'bg-red-50/40' : ohType === 'day1-3' ? 'bg-orange-50/30' : ''}`}
+              className={`relative border-r border-gray-100 p-0 ${weekend ? 'bg-blue-50/30' : ohType === 'day0' ? 'bg-red-50/40' : ohType === 'day1' ? 'bg-orange-50/30' : ''}`}
               style={{ width: 32, minWidth: 32 }}>
               {isHOD ? <div className="w-8 h-8" /> : (
                 <button
@@ -344,11 +438,24 @@ export default function ScheduleGrid({ dept }: { dept: string }) {
             </td>
           )
         })}
-        <td className="sticky right-0 bg-white border-l border-gray-100 text-center text-xs font-bold px-2 w-10">
-          <span className={isHOD ? 'text-gray-300' : work < config.workDaysMin ? 'text-red-500' : work > config.workDaysMax ? 'text-amber-500' : 'text-teal-600'}>
-            {isHOD ? '–' : work}
-          </span>
-        </td>
+        {(() => {
+          const s = statsOf(schedule, nurse.id, days)
+          const vals = [s.D, s.N, s.S, s.CH, s.O, s.leave]
+          return (
+            <>
+              {vals.map((v, i) => (
+                <td key={i} className="border-l border-gray-100 text-center text-[11px] text-gray-600 px-1 bg-amber-50/30" style={{ width: 28, minWidth: 28 }}>
+                  {isHOD ? '' : (v || '')}
+                </td>
+              ))}
+              <td className="border-l border-gray-200 text-center text-xs font-bold px-1.5 bg-amber-50/60" style={{ width: 32, minWidth: 32 }}>
+                <span className={isHOD ? 'text-gray-300' : work < config.workDaysMin ? 'text-red-500' : work > config.workDaysMax ? 'text-amber-500' : 'text-teal-600'}>
+                  {isHOD ? '–' : work}
+                </span>
+              </td>
+            </>
+          )
+        })()}
       </tr>
     )
   }
@@ -403,9 +510,21 @@ export default function ScheduleGrid({ dept }: { dept: string }) {
             className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
             🔒 Pre-lock {prelocks.length > 0 && <span className="bg-teal-500 text-white text-[10px] rounded-full px-1.5">{prelocks.length}</span>}
           </button>
-          <button onClick={handleAutoSchedule}
+          <button onClick={() => setShowAutoConfirm(true)}
             className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-white bg-teal-600 rounded-lg hover:bg-teal-700 transition shadow-sm">
             ⚡ จัดเวรเดือนนี้
+          </button>
+          <button onClick={() => setShowStaff(true)}
+            className="px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+            👥 บุคลากร {nurses.length > 0 && <span className="text-gray-400">{nurses.length}</span>}
+          </button>
+          <button onClick={() => exportExcel(data, dept)}
+            className="px-3 py-1.5 text-xs font-medium text-green-700 border border-green-200 rounded-lg hover:bg-green-50 transition">
+            📊 Excel
+          </button>
+          <button onClick={() => exportPDF(data, dept)}
+            className="px-3 py-1.5 text-xs font-medium text-rose-700 border border-rose-200 rounded-lg hover:bg-rose-50 transition">
+            📄 PDF
           </button>
           <button onClick={handleClear}
             className="px-3 py-1.5 text-xs text-gray-400 hover:text-red-500 border border-gray-200 rounded-lg hover:border-red-200 transition">
@@ -423,7 +542,7 @@ export default function ScheduleGrid({ dept }: { dept: string }) {
           ) : null
         })}
         {isCCU && <span className="ml-2 flex items-center gap-1 text-[10px] text-red-400"><span className="w-2 h-2 rounded-sm bg-red-100 inline-block border border-red-200" /> OH Day0</span>}
-        {isCCU && <span className="flex items-center gap-1 text-[10px] text-orange-400"><span className="w-2 h-2 rounded-sm bg-orange-50 inline-block border border-orange-200" /> Day1-3</span>}
+        {isCCU && <span className="flex items-center gap-1 text-[10px] text-orange-400"><span className="w-2 h-2 rounded-sm bg-orange-50 inline-block border border-orange-200" /> OH Day1</span>}
         <span className="ml-auto text-[10px] text-gray-400">คลิกช่องเพื่อเลือกเวร</span>
       </div>
 
@@ -433,8 +552,8 @@ export default function ScheduleGrid({ dept }: { dept: string }) {
           <span className="text-[10px] font-semibold text-red-500 uppercase tracking-wide">Open Heart</span>
           {ohCases.map(c => (
             <div key={c.id} className="flex items-center gap-1 bg-white border border-red-200 rounded-lg px-2 py-1 text-xs">
-              <span className="font-bold text-red-600">Day0={c.opDay}</span>
-              <span className="text-gray-400">D1-3: {c.opDay+1}–{Math.min(c.opDay+3, days)}</span>
+              <span className="font-bold text-red-600">ผ่าตัดวันที่ {c.opDay}</span>
+              <span className="text-gray-400">บูสต์ D,N วันที่ {c.opDay}–{Math.min(c.opDay+1, days)}</span>
               <button onClick={() => removeOHCase(c.id)} className="text-gray-300 hover:text-red-400 ml-1">✕</button>
             </div>
           ))}
@@ -468,7 +587,7 @@ export default function ScheduleGrid({ dept }: { dept: string }) {
       )}
 
       {/* Grid */}
-      <div className="flex-1 overflow-auto">
+      <div ref={gridRef} className="flex-1 overflow-auto">
         <table className="border-collapse text-xs" style={{ tableLayout: 'fixed' }}>
           <thead className="sticky top-0 z-20 bg-white">
             <tr>
@@ -479,53 +598,66 @@ export default function ScheduleGrid({ dept }: { dept: string }) {
                 const ohType = ohDayMap.get(d)
                 return (
                   <th key={d}
-                    className={`border-b border-r border-gray-200 py-1 text-center ${weekend ? 'bg-blue-50' : ohType === 'day0' ? 'bg-red-50' : ohType === 'day1-3' ? 'bg-orange-50' : 'bg-white'}`}
+                    className={`border-b border-r border-gray-200 py-1 text-center ${weekend ? 'bg-blue-50' : ohType === 'day0' ? 'bg-red-50' : ohType === 'day1' ? 'bg-orange-50' : 'bg-white'}`}
                     style={{ width: 32, minWidth: 32 }}>
                     <div className={`text-[9px] ${weekend ? 'text-blue-400' : ohType ? 'text-red-400' : 'text-gray-400'}`}>{thaiDow(year, month, d)}</div>
-                    <div className={`text-[11px] font-semibold ${weekend ? 'text-blue-600' : ohType === 'day0' ? 'text-red-600' : ohType === 'day1-3' ? 'text-orange-500' : 'text-gray-700'}`}>{d}</div>
+                    <div className={`text-[11px] font-semibold ${weekend ? 'text-blue-600' : ohType === 'day0' ? 'text-red-600' : ohType === 'day1' ? 'text-orange-500' : 'text-gray-700'}`}>{d}</div>
                   </th>
                 )
               })}
-              <th className="sticky right-0 z-30 bg-white border-b border-l border-gray-200 w-10 text-center text-[11px] text-gray-500 font-medium px-1">วัน</th>
+              {SUMMARY_COLS.map((c, i) => (
+                <th key={c} className={`border-b border-l border-gray-200 text-center text-[10px] font-semibold px-1 ${i === SUMMARY_COLS.length - 1 ? 'text-teal-600 bg-amber-50' : 'text-gray-500 bg-amber-50/50'}`} style={{ width: c === 'รวม' ? 32 : 28, minWidth: 28 }}>{c}</th>
+              ))}
             </tr>
           </thead>
           <tbody>
             {rnNurses.length > 0 && (
-              <tr><td colSpan={days + 2} className="bg-gray-50 px-3 py-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wide border-b border-gray-100">
+              <tr><td colSpan={days + 1 + SUMMARY_COLS.length} className="bg-gray-50 px-3 py-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wide border-b border-gray-100">
                 RN · พยาบาลวิชาชีพ ({rnNurses.length} คน)
               </td></tr>
             )}
             {rnNurses.map(renderRow)}
             {pnNurses.length > 0 && (
-              <tr><td colSpan={days + 2} className="bg-gray-50 px-3 py-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wide border-b border-t border-gray-100">
+              <tr><td colSpan={days + 1 + SUMMARY_COLS.length} className="bg-gray-50 px-3 py-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wide border-b border-t border-gray-100">
                 PN · พยาบาลเทคนิค ({pnNurses.length} คน)
               </td></tr>
             )}
             {pnNurses.map(renderRow)}
-            {/* Day summary */}
-            <tr className="bg-gray-50 border-t border-gray-200">
-              <td className="sticky left-0 bg-gray-50 border-r border-gray-200 px-3 py-1 text-[10px] font-semibold text-gray-500">รวม D / N</td>
-              {Array.from({ length: days }, (_, i) => {
-                const d = i + 1
-                const dCount = activeNurses.filter(n => n.position !== 'HOD' && schedule[`${n.id}-${d}`] === 'D').length
-                const nCount = activeNurses.filter(n => n.position !== 'HOD' && schedule[`${n.id}-${d}`] === 'N').length
-                return (
-                  <td key={d} className="border-r border-gray-200 text-center py-1" style={{ width: 32 }}>
-                    <div className="text-[9px] font-bold text-blue-600">{dCount || ''}</div>
-                    <div className="text-[9px] font-bold text-purple-600">{nCount || ''}</div>
-                  </td>
-                )
-              })}
-              <td className="sticky right-0 bg-gray-50 border-l border-gray-200" />
-            </tr>
+            {/* Day summary: D / N / O per day */}
+            {([
+              { label: 'D เวรเช้า', shifts: ['D', 'S'] as ShiftCode[], cls: 'text-blue-600' },
+              { label: 'N เวรดึก',  shifts: ['N'] as ShiftCode[],      cls: 'text-purple-600' },
+              { label: 'O หยุด',    shifts: ['O'] as ShiftCode[],      cls: 'text-gray-500' },
+            ]).map((row, ri) => (
+              <tr key={ri} className={`bg-gray-50 ${ri === 0 ? 'border-t-2 border-gray-300' : ''}`}>
+                <td className="sticky left-0 bg-gray-50 border-r border-gray-200 px-3 py-0.5 text-[10px] font-semibold text-gray-500">{row.label}</td>
+                {Array.from({ length: days }, (_, i) => {
+                  const d = i + 1
+                  const cnt = activeNurses.filter(n => n.position !== 'HOD' && row.shifts.includes(schedule[`${n.id}-${d}`] as ShiftCode)).length
+                  return (
+                    <td key={d} className={`border-r border-gray-200 text-center py-0.5 text-[10px] font-bold ${row.cls}`} style={{ width: 32 }}>{cnt || ''}</td>
+                  )
+                })}
+                <td colSpan={SUMMARY_COLS.length} className="bg-gray-50 border-l border-gray-200" />
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
 
       {/* Warning panel */}
-      <WarningPanel warnings={warnings} onDismiss={dismissWarning} />
+      <WarningPanel warnings={warnings} onDismiss={dismissWarning} onGoToDay={goToDay} />
+
+      {/* Rules panel */}
+      <RulesPanel />
 
       {/* Modals */}
+      {showAutoConfirm && (
+        <AutoConfirmModal
+          monthLabel={monthLabel} config={config} ohCount={ohCases.length}
+          onConfirm={handleAutoSchedule}
+          onClose={() => setShowAutoConfirm(false)} />
+      )}
       {showPrelock && (
         <PrelockModal nurses={nurses} year={year} month={month}
           onAdd={pl => { addPrelock(pl); setShowPrelock(false) }}
@@ -535,6 +667,12 @@ export default function ScheduleGrid({ dept }: { dept: string }) {
         <OHModal year={year} month={month}
           onAdd={d => { addOHCase(d); setShowOH(false) }}
           onClose={() => setShowOH(false)} />
+      )}
+      {showStaff && (
+        <StaffModal nurses={nurses}
+          onAdd={addNurse} onUpdate={updateNurse}
+          onRemove={removeNurse} onToggle={toggleNurseActive}
+          onClose={() => setShowStaff(false)} />
       )}
     </div>
   )
