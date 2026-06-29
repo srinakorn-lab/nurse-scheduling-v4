@@ -349,6 +349,7 @@ export function runAutoSchedule(
       for (let d = 1; d <= days; d++) {
         if (workCount(sc, u.id, days) >= cfg.workDaysMin) break
         if (getS(sc, u.id, d) !== 'O') continue
+        if (isPrelock(u.id, d)) continue   // อย่าทับวัน O/ลา ที่จองไว้ (Pre-lock)
         const shift: ShiftCode = countOnDay(sc, rnDPool, d, 'D') < effRnD(d) ? 'D' : 'N'
         if (!hardOk(u, d, shift)) continue
         setS(sc, u.id, d, shift)
