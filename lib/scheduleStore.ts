@@ -119,7 +119,9 @@ export function useSchedule(dept: string) {
   const setShift = useCallback((nurseId: string, day: number, shift: ShiftCode) => {
     setData(prev => {
       if (!prev) return prev
-      const next = { ...prev, schedule: { ...prev.schedule, [`${nurseId}-${day}`]: shift } }
+      const key = `${nurseId}-${day}`
+      const roles = { ...prev.roles }; delete roles[key]   // clear stale role on manual edit
+      const next = { ...prev, schedule: { ...prev.schedule, [key]: shift }, roles }
       localStorage.setItem(storageKey(dept), JSON.stringify(next))
       return next
     })
@@ -165,7 +167,15 @@ export function useSchedule(dept: string) {
   const addPrelock = useCallback((pl: PrelockEntry) => {
     setData(prev => {
       if (!prev) return prev
-      const next = { ...prev, prelocks: [...prev.prelocks, pl] }
+      // pin shift onto the schedule immediately so it shows in the grid
+      const schedule = { ...prev.schedule }
+      const roles = { ...prev.roles }
+      for (const d of pl.days) {
+        const key = `${pl.nurseId}-${d}`
+        schedule[key] = pl.shift
+        delete roles[key]   // a pre-locked leave/off has no I/TL role
+      }
+      const next = { ...prev, prelocks: [...prev.prelocks, pl], schedule, roles }
       localStorage.setItem(storageKey(dept), JSON.stringify(next))
       return next
     })
@@ -174,7 +184,15 @@ export function useSchedule(dept: string) {
   const removePrelock = useCallback((id: string) => {
     setData(prev => {
       if (!prev) return prev
-      const next = { ...prev, prelocks: prev.prelocks.filter(p => p.id !== id) }
+      const pl = prev.prelocks.find(p => p.id === id)
+      const schedule = { ...prev.schedule }
+      if (pl) {
+        for (const d of pl.days) {
+          const key = `${pl.nurseId}-${d}`
+          if (schedule[key] === pl.shift) delete schedule[key]
+        }
+      }
+      const next = { ...prev, prelocks: prev.prelocks.filter(p => p.id !== id), schedule }
       localStorage.setItem(storageKey(dept), JSON.stringify(next))
       return next
     })

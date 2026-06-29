@@ -62,7 +62,8 @@ function PrelockModal({ nurses, year, month, onAdd, onClose }: {
   onAdd: (pl: PrelockEntry) => void; onClose: () => void
 }) {
   const days = daysInMonth(year, month)
-  const [nurseId, setNurseId] = useState(nurses[0]?.id ?? '')
+  const activeNurses = nurses.filter(n => n.active && n.position !== 'HOD')
+  const [nurseId, setNurseId] = useState(activeNurses[0]?.id ?? '')
   const [shift, setShift]     = useState<ShiftCode>('O')
   const [selDays, setSelDays] = useState<Set<number>>(new Set())
   const [note, setNote]       = useState('')
@@ -76,8 +77,6 @@ function PrelockModal({ nurses, year, month, onAdd, onClose }: {
     onAdd({ id: `pl_${Date.now()}`, nurseId, days: [...selDays].sort((a,b)=>a-b), shift, note })
     onClose()
   }
-
-  const activeNurses = nurses.filter(n => n.active && n.position !== 'HOD')
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
