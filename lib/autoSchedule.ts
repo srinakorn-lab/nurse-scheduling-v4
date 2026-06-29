@@ -35,10 +35,12 @@ export interface OHCase {
 export interface WarningEntry {
   day?: number
   nurseId?: string
-  type: 'senior_short' | 'coverage_short' | 'over_consec' | 'oh_short'
+  type: 'senior_short' | 'coverage_short' | 'over_consec' | 'oh_short' | 'role_short'
   msg: string
   severity: 'crit' | 'warn'
 }
+
+export type RoleCode = 'I' | 'TL'
 
 export interface ScheduleInput {
   year: number
@@ -108,7 +110,7 @@ export function runAutoSchedule(
   input: ScheduleInput,
   prelocks: PrelockEntry[] = [],
   cfg: AutoConfig = DEFAULT_CONFIG,
-): { schedule: Sched; report: string[]; warnings: WarningEntry[] } {
+): { schedule: Sched; report: string[]; warnings: WarningEntry[]; roles: Record<string, RoleCode> } {
   const { year, month, nurses, carryover = {}, ohCases = [] } = input
   const days = daysInMonth(year, month)
   const sc: Sched = {}
@@ -386,6 +388,25 @@ export function runAutoSchedule(
     if (!swapped) break
   }
 
+  // Pass 10: assign Incharge (I) + Team Lead (TL) per shift
+  const canI  = new Set(['CNS', 'RN4', 'RN3', 'CO'])
+  const canTL = new Set(['CNS', 'RN4', 'RN3', 'RN2', 'CO'])
+  const roles: Record<string, RoleCode> = {}
+  for (let d = 1; d <= days; d++) {
+    for (const shift of ['D', 'N'] as ShiftCode[]) {
+      const onShift = rnAll.filter(n => getS(sc, n.id, d) === shift)
+      if (onShift.length === 0) continue
+      const iCand = onShift.find(n => canI.has(n.position))
+      if (iCand) roles[`${iCand.id}-${d}`] = 'I'
+      // Team Lead: a different nurse, prefer RN2 so seniors stay as Incharge
+      const tlCand = onShift.find(n => n.id !== iCand?.id && n.position === 'RN2')
+                  ?? onShift.find(n => n.id !== iCand?.id && canTL.has(n.position))
+      if (tlCand) roles[`${tlCand.id}-${d}`] = 'TL'
+      if (!iCand)  warnings.push({ day: d, type: 'role_short', msg: `วันที่ ${d} เวร ${shift}: ไม่มี Incharge (I)`, severity: 'warn' })
+      if (!tlCand) warnings.push({ day: d, type: 'role_short', msg: `วันที่ ${d} เวร ${shift}: ไม่มี Team Lead (TL)`, severity: 'warn' })
+    }
+  }
+
   // ── Generate warnings for final state ─────────────────────────
   // Coverage shortages
   for (let d = 1; d <= days; d++) {
@@ -426,5 +447,5 @@ export function runAutoSchedule(
     report.push(wc > 0 ? `✓ จัดเสร็จ — มี ${wc} คำเตือนสำคัญ` : '✓ จัดเสร็จ — ทุกคนอยู่ในเป้าหมาย')
   }
 
-  return { schedule: sc, report, warnings }
+  return { schedule: sc, report, warnings, roles }
 }

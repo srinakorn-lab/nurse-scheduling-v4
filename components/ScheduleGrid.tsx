@@ -330,10 +330,12 @@ function statsOf(schedule: Record<string, ShiftCode>, nurseId: string, days: num
     const s = schedule[`${nurseId}-${d}`]
     if (s && s in c) c[s]++
   }
-  return { D: c.D, N: c.N, S: c.S, CH: c.CH, O: c.O, leave: c.V + c.T + c.L, work: c.D + c.N + c.S + c.CH }
+  const leave = c.V + c.T + c.L
+  const hours = c.D * 11 + c.N * 11 + c.S * 15 + c.CH * 9 + leave * 11
+  return { D: c.D, N: c.N, S: c.S, CH: c.CH, O: c.O, leave, work: c.D + c.N + c.S + c.CH, hours }
 }
 
-const SUMMARY_COLS = ['D', 'N', 'S', 'ช', 'O', 'ลา', 'รวม']
+const SUMMARY_COLS = ['D', 'N', 'S', 'ช', 'O', 'ลา', 'รวม', 'ชม.']
 
 // ── Main component ─────────────────────────────────────────────────
 export default function ScheduleGrid({ dept }: { dept: string }) {
@@ -365,7 +367,7 @@ export default function ScheduleGrid({ dept }: { dept: string }) {
 
   if (!data) return <div className="flex items-center justify-center h-64 text-sm text-gray-400">กำลังโหลด...</div>
 
-  const { year, month, nurses, schedule, prelocks, ohCases, config, warnings } = data
+  const { year, month, nurses, schedule, prelocks, ohCases, config, warnings, roles } = data
   const days = daysInMonth(year, month)
   const activeNurses = nurses.filter(n => n.active)
   const rnNurses = activeNurses.filter(n => n.group === 'RN')
@@ -407,6 +409,11 @@ export default function ScheduleGrid({ dept }: { dept: string }) {
           <div className="flex items-center gap-1.5">
             <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${posStyle}`}>{nurse.position}</span>
             <span className={`text-xs ${isHOD ? 'text-gray-400 italic' : 'text-gray-700'}`}>{nurse.name}</span>
+            {(() => {
+              const cap = ['CNS','RN4','RN3','CO'].includes(nurse.position) ? 'I·TL'
+                : nurse.position === 'RN2' ? 'TL' : ''
+              return cap ? <span className="ml-auto text-[8px] text-gray-400 font-medium">{cap}</span> : null
+            })()}
           </div>
         </td>
         {Array.from({ length: days }, (_, i) => {
@@ -430,6 +437,7 @@ export default function ScheduleGrid({ dept }: { dept: string }) {
                   style={{ background: shift ? st.bg : 'transparent', color: shift ? st.text : '#d1d5db' }}>
                   {st.label || '·'}
                   {isLocked && <span className="absolute top-0.5 right-0.5 w-1 h-1 rounded-full bg-teal-500" />}
+                  {roles[key] && <span className="absolute bottom-0 left-0.5 text-[7px] font-bold leading-none text-gray-500">{roles[key] === 'I' ? 'i' : 't'}</span>}
                 </button>
               )}
               {isOpen && !isHOD && (
@@ -452,6 +460,9 @@ export default function ScheduleGrid({ dept }: { dept: string }) {
                 <span className={isHOD ? 'text-gray-300' : work < config.workDaysMin ? 'text-red-500' : work > config.workDaysMax ? 'text-amber-500' : 'text-teal-600'}>
                   {isHOD ? '–' : work}
                 </span>
+              </td>
+              <td className="border-l border-gray-100 text-center text-[10px] text-gray-500 px-1 bg-amber-50/40" style={{ width: 36, minWidth: 36 }}>
+                {isHOD ? '' : s.hours}
               </td>
             </>
           )
@@ -543,6 +554,7 @@ export default function ScheduleGrid({ dept }: { dept: string }) {
         })}
         {isCCU && <span className="ml-2 flex items-center gap-1 text-[10px] text-red-400"><span className="w-2 h-2 rounded-sm bg-red-100 inline-block border border-red-200" /> OH Day0</span>}
         {isCCU && <span className="flex items-center gap-1 text-[10px] text-orange-400"><span className="w-2 h-2 rounded-sm bg-orange-50 inline-block border border-orange-200" /> OH Day1</span>}
+        <span className="ml-3 text-[10px] text-gray-400">i = Incharge · t = Team Lead</span>
         <span className="ml-auto text-[10px] text-gray-400">คลิกช่องเพื่อเลือกเวร</span>
       </div>
 

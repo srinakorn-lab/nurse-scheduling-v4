@@ -4,9 +4,9 @@ import type { Nurse } from './types'
 import { getDefaultNurses } from './nurseDefaults'
 import { THAI_MONTHS } from './constants'
 import { runAutoSchedule, DEFAULT_CONFIG } from './autoSchedule'
-import type { AutoConfig, PrelockEntry, ShiftCode, OHCase, WarningEntry } from './autoSchedule'
+import type { AutoConfig, PrelockEntry, ShiftCode, OHCase, WarningEntry, RoleCode } from './autoSchedule'
 
-export type { ShiftCode, PrelockEntry, AutoConfig, OHCase, WarningEntry }
+export type { ShiftCode, PrelockEntry, AutoConfig, OHCase, WarningEntry, RoleCode }
 
 export interface ScheduleData {
   year: number
@@ -18,6 +18,7 @@ export interface ScheduleData {
   config: AutoConfig
   warnings: WarningEntry[]
   carryover: Record<string, ShiftCode>
+  roles: Record<string, RoleCode>
 }
 
 const SHIFT_CYCLE: ShiftCode[] = ['D', 'N', 'O', 'V', 'T', 'L', '']
@@ -67,6 +68,7 @@ function makeEmpty(dept: string): ScheduleData {
     config: { ...DEFAULT_CONFIG },
     warnings: [],
     carryover: {},
+    roles: {},
   }
 }
 
@@ -102,6 +104,7 @@ export function useSchedule(dept: string) {
         if (!parsed.config)    parsed.config    = { ...DEFAULT_CONFIG }
         if (!parsed.warnings)  parsed.warnings  = []
         if (!parsed.carryover) parsed.carryover = {}
+        if (!parsed.roles)     parsed.roles     = {}
         setData(parsed); return
       } catch {}
     }
@@ -143,6 +146,7 @@ export function useSchedule(dept: string) {
         ohCases: [],
         warnings: [],
         carryover: newCarryover,
+        roles: {},
       }
       localStorage.setItem(storageKey(dept), JSON.stringify(next))
       return next
@@ -209,6 +213,7 @@ export function useSchedule(dept: string) {
         ...prev,
         schedule: result.schedule as Record<string, ShiftCode>,
         warnings: result.warnings,
+        roles: result.roles,
       }
       localStorage.setItem(storageKey(dept), JSON.stringify(next))
       return next
@@ -219,7 +224,7 @@ export function useSchedule(dept: string) {
   const clearSchedule = useCallback(() => {
     setData(prev => {
       if (!prev) return prev
-      const next = { ...prev, schedule: {}, warnings: [] }
+      const next = { ...prev, schedule: {}, warnings: [], roles: {} }
       localStorage.setItem(storageKey(dept), JSON.stringify(next))
       return next
     })

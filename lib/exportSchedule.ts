@@ -5,7 +5,7 @@ import type { Nurse } from './types'
 
 interface NurseStats {
   D: number; N: number; S: number; CH: number
-  O: number; leave: number; work: number
+  O: number; leave: number; work: number; hours: number
 }
 
 function statsOf(schedule: Record<string, ShiftCode>, id: string, days: number): NurseStats {
@@ -14,10 +14,12 @@ function statsOf(schedule: Record<string, ShiftCode>, id: string, days: number):
     const s = schedule[`${id}-${d}`]
     if (s && s in c) c[s]++
   }
+  const leave = c.V + c.T + c.L
   return {
     D: c.D, N: c.N, S: c.S, CH: c.CH, O: c.O,
-    leave: c.V + c.T + c.L,
+    leave,
     work: c.D + c.N + c.S + c.CH,
+    hours: c.D * 11 + c.N * 11 + c.S * 15 + c.CH * 9 + leave * 11,
   }
 }
 
@@ -30,7 +32,7 @@ function buildTableHTML(data: ScheduleData, deptName: string): string {
   const pn = active.filter(n => n.group === 'PN')
   const monthName = THAI_MONTHS[month - 1]
 
-  const SUMMARY_COLS = ['O', 'D', 'N', 'S', 'ช', 'ลา', 'รวมเวร']
+  const SUMMARY_COLS = ['O', 'D', 'N', 'S', 'ช', 'ลา', 'รวมเวร', 'ชม.']
   const totalCols = 3 + days + SUMMARY_COLS.length
 
   const cellStyle = 'border:1px solid #cbd5e1;text-align:center;font-size:11px;padding:2px 3px;'
@@ -54,7 +56,7 @@ function buildTableHTML(data: ScheduleData, deptName: string): string {
       const bg = style.label ? style.bg : '#ffffff'
       return `<td style="${cellStyle}background:${bg};color:${style.text || '#475569'}">${style.label || ''}</td>`
     }).join('')
-    const sumCells = [st.O, st.D, st.N, st.S, st.CH, st.leave, st.work]
+    const sumCells = [st.O, st.D, st.N, st.S, st.CH, st.leave, st.work, st.hours]
       .map(v => `<td style="${cellStyle}background:#fffbeb;font-weight:bold">${v || ''}</td>`).join('')
     return `<tr>
       <td style="${cellStyle}">${idx + 1}</td>
