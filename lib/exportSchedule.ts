@@ -23,16 +23,17 @@ function statsOf(schedule: Record<string, ShiftCode>, id: string, days: number):
   }
 }
 
-// ── Build the schedule table as HTML (shared by Excel + PDF) ──────
-function buildTableHTML(data: ScheduleData, deptName: string): string {
-  const { year, month, nurses, schedule } = data
-  const days = daysInMonth(year, month)
-  const active = nurses.filter(n => n.active)
-  const rn = active.filter(n => n.group === 'RN')
-  const pn = active.filter(n => n.group === 'PN')
-  const monthName = THAI_MONTHS[month - 1]
+const SUMMARY_COLS = ['O', 'D', 'N', 'S', 'ช', 'ลา', 'รวมเวร', 'ชม.']
 
-  const SUMMARY_COLS = ['O', 'D', 'N', 'S', 'ช', 'ลา', 'รวมเวร', 'ชม.']
+// ── Build ONE group's table (RN หรือ PN) — มีหัวเรื่อง + หัวตาราง + สรุปของตัวเอง ──
+// ทำเป็น <table> เดียวจบในตัว เพื่อให้เป็น 1 worksheet (Excel) / 1 หน้า (PDF)
+function buildGroupTable(
+  data: ScheduleData, deptName: string,
+  group: Nurse[], groupTitle: string, tag: string,
+): string {
+  const { year, month, schedule } = data
+  const days = daysInMonth(year, month)
+  const monthName = THAI_MONTHS[month - 1]
   const totalCols = 3 + days + SUMMARY_COLS.length
 
   const cellStyle = 'border:1px solid #cbd5e1;text-align:center;font-size:11px;padding:2px 3px;'
@@ -44,7 +45,6 @@ function buildTableHTML(data: ScheduleData, deptName: string): string {
     const wknd = dow === 'ส' || dow === 'อา'
     return `<th style="${headStyle}${wknd ? 'background:#dbeafe;' : ''}"><div style="font-size:8px;color:#64748b">${dow}</div>${d}</th>`
   }).join('')
-
   const summaryHeads = SUMMARY_COLS.map(c => `<th style="${headStyle}background:#fef3c7;">${c}</th>`).join('')
 
   function nurseRow(n: Nurse, idx: number): string {
@@ -66,56 +66,53 @@ function buildTableHTML(data: ScheduleData, deptName: string): string {
     </tr>`
   }
 
-  function groupHeader(label: string, count: number): string {
-    return `<tr><td colspan="${totalCols}" style="${cellStyle}text-align:left;background:#e2e8f0;font-weight:bold;">${label} (${count} คน)</td></tr>`
-  }
-
-  // แถวรวมรายวัน — นับเฉพาะ roster ที่ส่งมา (RN หรือ PN) แยกกัน
-  function daySummary(roster: Nurse[], tag: string, label: string, shifts: ShiftCode[]): string {
-    const ros = roster.filter(n => n.position !== 'HOD')
+  function daySummary(label: string, shifts: ShiftCode[]): string {
+    const ros = group.filter(n => n.position !== 'HOD')
     const cells = Array.from({ length: days }, (_, i) => {
       const d = i + 1
       const cnt = ros.filter(n => shifts.includes(schedule[`${n.id}-${d}`] as ShiftCode)).length
       return `<td style="${cellStyle}font-weight:bold;color:#475569">${cnt || ''}</td>`
     }).join('')
     return `<tr>
-      <td colspan="3" style="${cellStyle}text-align:right;font-weight:bold;background:#f8fafc">${tag} · รวม ${label}</td>
+      <td colspan="3" style="${cellStyle}text-align:right;font-weight:bold;background:#f8fafc">รวม ${label}</td>
       ${cells}<td colspan="${SUMMARY_COLS.length}" style="${cellStyle}background:#f8fafc"></td>
     </tr>`
   }
 
-  return `
-  <div style="font-family:'Sarabun','Tahoma',sans-serif;">
-    <div style="font-size:16px;font-weight:bold;margin-bottom:6px;">
-      ตารางเวรพยาบาล แผนก ${deptName} — ${monthName} ${year + 543}
-    </div>
-    <table style="border-collapse:collapse;">
-      <thead>
-        <tr>
-          <th style="${headStyle}">ลำดับ</th>
-          <th style="${headStyle}">ชื่อ-สกุล</th>
-          <th style="${headStyle}">ตำแหน่ง</th>
-          ${dayHeads}${summaryHeads}
-        </tr>
-      </thead>
-      <tbody>
-        ${rn.length ? groupHeader('RN พยาบาลวิชาชีพ', rn.length) : ''}
-        ${rn.map((n, i) => nurseRow(n, i)).join('')}
-        ${rn.length ? daySummary(rn, 'RN', 'D เวรเช้า', ['D', 'S']) : ''}
-        ${rn.length ? daySummary(rn, 'RN', 'N เวรดึก', ['N']) : ''}
-        ${rn.length ? daySummary(rn, 'RN', 'O หยุด', ['O']) : ''}
-        ${pn.length ? groupHeader('PN พยาบาลเทคนิค', pn.length) : ''}
-        ${pn.map((n, i) => nurseRow(n, i)).join('')}
-        ${pn.length ? daySummary(pn, 'PN', 'D เวรเช้า', ['D', 'S']) : ''}
-        ${pn.length ? daySummary(pn, 'PN', 'N เวรดึก', ['N']) : ''}
-        ${pn.length ? daySummary(pn, 'PN', 'O หยุด', ['O']) : ''}
-      </tbody>
-    </table>
-    <div style="margin-top:24px;font-size:12px;display:flex;gap:80px;">
-      <div>ลงชื่อ.............................................ผู้จัดทำ</div>
-      <div>ลงชื่อ.............................................ผู้ตรวจสอบ</div>
-    </div>
-  </div>`
+  return `<table style="border-collapse:collapse;font-family:'Sarabun','Tahoma',sans-serif;">
+    <tr><td colspan="${totalCols}" style="border:none;font-size:16px;font-weight:bold;padding:4px 2px;text-align:left;">
+      ตารางเวรพยาบาล แผนก ${deptName} — ${groupTitle} — ${monthName} ${year + 543}
+    </td></tr>
+    <thead>
+      <tr>
+        <th style="${headStyle}">ลำดับ</th>
+        <th style="${headStyle}">ชื่อ-สกุล</th>
+        <th style="${headStyle}">ตำแหน่ง</th>
+        ${dayHeads}${summaryHeads}
+      </tr>
+    </thead>
+    <tbody>
+      ${group.map((n, i) => nurseRow(n, i)).join('')}
+      ${daySummary('D เวรเช้า', ['D', 'S'])}
+      ${daySummary('N เวรดึก', ['N'])}
+      ${daySummary('O หยุด', ['O'])}
+      <tr><td colspan="${totalCols}" style="border:none;height:26px;"></td></tr>
+      <tr>
+        <td colspan="${Math.ceil(totalCols / 2)}" style="border:none;font-size:12px;padding-top:8px;">ลงชื่อ.............................................ผู้จัดทำ</td>
+        <td colspan="${Math.floor(totalCols / 2)}" style="border:none;font-size:12px;padding-top:8px;">ลงชื่อ.............................................ผู้ตรวจสอบ</td>
+      </tr>
+    </tbody>
+  </table>`
+}
+
+function groupTables(data: ScheduleData, deptName: string): { rn: string; pn: string } {
+  const active = data.nurses.filter(n => n.active)
+  const rn = active.filter(n => n.group === 'RN')
+  const pn = active.filter(n => n.group === 'PN')
+  return {
+    rn: buildGroupTable(data, deptName, rn, 'RN พยาบาลวิชาชีพ', 'RN'),
+    pn: buildGroupTable(data, deptName, pn, 'PN พยาบาลเทคนิค', 'PN'),
+  }
 }
 
 function triggerDownload(blob: Blob, filename: string) {
@@ -129,21 +126,23 @@ function triggerDownload(blob: Blob, filename: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
-// ── Excel export (.xls via HTML — opens in Excel, รองรับภาษาไทย) ──
+// ── Excel export — RN และ PN เป็นคนละชีต ──
 export function exportExcel(data: ScheduleData, deptName: string) {
-  const table = buildTableHTML(data, deptName)
+  const { rn, pn } = groupTables(data, deptName)
+  const sheet = (name: string) =>
+    `<x:ExcelWorksheet><x:Name>${name}</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet>`
   const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
-    <head><meta charset="utf-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>
-    <x:Name>ตารางเวร</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
-    </x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head>
-    <body>${table}</body></html>`
+    <head><meta charset="utf-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets>
+    ${sheet('RN')}${sheet('PN')}
+    </x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head>
+    <body>${rn}${pn}</body></html>`
   const blob = new Blob(['﻿', html], { type: 'application/vnd.ms-excel;charset=utf-8' })
   triggerDownload(blob, `ตารางเวร_${deptName}_${THAI_MONTHS[data.month - 1]}_${data.year + 543}.xls`)
 }
 
-// ── PDF export (print window → Save as PDF) ───────────────────────
+// ── PDF export — RN และ PN คนละหน้า (page-break) ──
 export function exportPDF(data: ScheduleData, deptName: string) {
-  const table = buildTableHTML(data, deptName)
+  const { rn, pn } = groupTables(data, deptName)
   const win = window.open('', '_blank')
   if (!win) {
     alert('กรุณาอนุญาต popup เพื่อสร้าง PDF')
@@ -153,16 +152,19 @@ export function exportPDF(data: ScheduleData, deptName: string) {
     <title>ตารางเวร ${deptName}</title>
     <style>
       @page { size: A3 landscape; margin: 8mm; }
-      body { margin: 0; }
+      body { margin: 0; font-family: 'Sarabun','Tahoma',sans-serif; }
+      .page { page-break-after: always; }
+      .page:last-child { page-break-after: auto; }
       @media print { .noprint { display: none; } }
     </style>
     </head><body>
-      <div class="noprint" style="padding:10px;text-align:center;font-family:sans-serif;">
+      <div class="noprint" style="padding:10px;text-align:center;">
         <button onclick="window.print()" style="padding:8px 24px;font-size:14px;background:#0d9488;color:#fff;border:none;border-radius:8px;cursor:pointer;">
-          🖨 พิมพ์ / บันทึกเป็น PDF
+          🖨 พิมพ์ / บันทึกเป็น PDF (RN + PN คนละหน้า)
         </button>
       </div>
-      ${table}
+      <div class="page">${rn}</div>
+      <div class="page">${pn}</div>
       <script>window.onload = function(){ setTimeout(function(){ window.print() }, 400) }<\/script>
     </body></html>`)
   win.document.close()
