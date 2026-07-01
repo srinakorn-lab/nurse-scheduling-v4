@@ -70,14 +70,16 @@ function buildTableHTML(data: ScheduleData, deptName: string): string {
     return `<tr><td colspan="${totalCols}" style="${cellStyle}text-align:left;background:#e2e8f0;font-weight:bold;">${label} (${count} คน)</td></tr>`
   }
 
-  function daySummary(label: string, shifts: ShiftCode[]): string {
+  // แถวรวมรายวัน — นับเฉพาะ roster ที่ส่งมา (RN หรือ PN) แยกกัน
+  function daySummary(roster: Nurse[], tag: string, label: string, shifts: ShiftCode[]): string {
+    const ros = roster.filter(n => n.position !== 'HOD')
     const cells = Array.from({ length: days }, (_, i) => {
       const d = i + 1
-      const cnt = active.filter(n => n.position !== 'HOD' && shifts.includes(schedule[`${n.id}-${d}`] as ShiftCode)).length
+      const cnt = ros.filter(n => shifts.includes(schedule[`${n.id}-${d}`] as ShiftCode)).length
       return `<td style="${cellStyle}font-weight:bold;color:#475569">${cnt || ''}</td>`
     }).join('')
     return `<tr>
-      <td colspan="3" style="${cellStyle}text-align:right;font-weight:bold;background:#f8fafc">รวม ${label}</td>
+      <td colspan="3" style="${cellStyle}text-align:right;font-weight:bold;background:#f8fafc">${tag} · รวม ${label}</td>
       ${cells}<td colspan="${SUMMARY_COLS.length}" style="${cellStyle}background:#f8fafc"></td>
     </tr>`
   }
@@ -99,10 +101,14 @@ function buildTableHTML(data: ScheduleData, deptName: string): string {
       <tbody>
         ${rn.length ? groupHeader('RN พยาบาลวิชาชีพ', rn.length) : ''}
         ${rn.map((n, i) => nurseRow(n, i)).join('')}
+        ${rn.length ? daySummary(rn, 'RN', 'D เวรเช้า', ['D', 'S']) : ''}
+        ${rn.length ? daySummary(rn, 'RN', 'N เวรดึก', ['N']) : ''}
+        ${rn.length ? daySummary(rn, 'RN', 'O หยุด', ['O']) : ''}
         ${pn.length ? groupHeader('PN พยาบาลเทคนิค', pn.length) : ''}
         ${pn.map((n, i) => nurseRow(n, i)).join('')}
-        ${daySummary('D', ['D', 'S'])}
-        ${daySummary('N', ['N'])}
+        ${pn.length ? daySummary(pn, 'PN', 'D เวรเช้า', ['D', 'S']) : ''}
+        ${pn.length ? daySummary(pn, 'PN', 'N เวรดึก', ['N']) : ''}
+        ${pn.length ? daySummary(pn, 'PN', 'O หยุด', ['O']) : ''}
       </tbody>
     </table>
     <div style="margin-top:24px;font-size:12px;display:flex;gap:80px;">
