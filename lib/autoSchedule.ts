@@ -357,65 +357,72 @@ export function runAutoSchedule(
     }
   }
 
-  // Pass 13.5: Fill D & N to target on EVERY day (coverage priority)
+  // Pass 13.5: Fill D & N to target on EVERY day (coverage priority) — ทั้ง RN และ PN
   //   phase 1 → candidates under the work-day cap
-  //   phase 2 → allow exceeding cap so N=4/D=4 is guaranteed (Hard Rules still enforced via hardOk)
-  for (let d = 1; d <= days; d++) {
-    for (const shift of ['D', 'N'] as ShiftCode[]) {
-      const pool   = shift === 'D' ? rnDPool : rnReg
-      const target = shift === 'D' ? effRnD(d) : effRnN(d)
-      let cur = countOnDay(sc, pool, d, shift)
-      if (cur >= target) continue
-      for (const allowOverCap of [false, true]) {
+  //   phase 2 → allow exceeding cap so coverage is guaranteed (Hard Rules still enforced via hardOk)
+  function fillCoverage(pool: Nurse[], d: number, shift: ShiftCode, target: number) {
+    let cur = countOnDay(sc, pool, d, shift)
+    if (cur >= target) return
+    for (const allowOverCap of [false, true]) {
+      if (cur >= target) break
+      const cands = pool.filter(n =>
+        getS(sc, n.id, d) === 'O' &&
+        !isPrelock(n.id, d) &&
+        hardOk(n, d, shift) &&
+        (allowOverCap || workCount(sc, n.id, days) < cfg.workDaysMax),
+      ).sort((a, b) => {
+        const sa = shiftCount(sc, a.id, shift, days), sb = shiftCount(sc, b.id, shift, days)
+        return sa !== sb ? sa - sb : workCount(sc, a.id, days) - workCount(sc, b.id, days)
+      })
+      for (const n of cands) {
         if (cur >= target) break
-        const cands = pool.filter(n =>
-          getS(sc, n.id, d) === 'O' &&
-          !isPrelock(n.id, d) &&
-          hardOk(n, d, shift) &&
-          (allowOverCap || workCount(sc, n.id, days) < cfg.workDaysMax),
-        ).sort((a, b) => {
-          const sa = shiftCount(sc, a.id, shift, days), sb = shiftCount(sc, b.id, shift, days)
-          return sa !== sb ? sa - sb : workCount(sc, a.id, days) - workCount(sc, b.id, days)
-        })
-        for (const n of cands) {
-          if (cur >= target) break
-          setS(sc, n.id, d, shift); cur++
-        }
+        setS(sc, n.id, d, shift); cur++
       }
     }
+  }
+  for (let d = 1; d <= days; d++) {
+    fillCoverage(rnDPool, d, 'D', effRnD(d))   // RN-D
+    fillCoverage(rnReg,   d, 'N', effRnN(d))   // RN-N
+    fillCoverage(pnAll,   d, 'D', cfg.pnD)     // PN-D
+    fillCoverage(pnReg,   d, 'N', cfg.pnN)     // PN-N
   }
 
   // Pass 14: N-balance swap — equalize N-shift distribution
-  const nWorkers = [...rnReg, ...pnReg]
-  for (let iter = 0; iter < 3; iter++) {
-    const nCounts = new Map(nWorkers.map(n => [n.id, shiftCount(sc, n.id, 'N', days)]))
-    const sorted  = [...nWorkers].sort((a, b) => (nCounts.get(b.id) ?? 0) - (nCounts.get(a.id) ?? 0))
-    let swapped = false
-    outer:
-    for (let hi = 0; hi < sorted.length - 1; hi++) {
-      for (let lo = sorted.length - 1; lo > hi; lo--) {
-        const hiN = nCounts.get(sorted[hi].id) ?? 0
-        const loN = nCounts.get(sorted[lo].id) ?? 0
-        if (hiN - loN <= 2) break outer
-        const hiNurse = sorted[hi]
-        const loNurse = sorted[lo]
-        for (let d = 1; d <= days; d++) {
-          if (getS(sc, hiNurse.id, d) !== 'N') continue
-          if (getS(sc, loNurse.id, d) !== 'O') continue
-          if (isPrelock(hiNurse.id, d) || isPrelock(loNurse.id, d)) continue
-          if (!hardOk(loNurse, d, 'N')) continue
-          setS(sc, hiNurse.id, d, 'O')
-          setS(sc, loNurse.id, d, 'N')
-          nCounts.set(hiNurse.id, hiN - 1)
-          nCounts.set(loNurse.id, loN + 1)
-          swapped = true
-          break
+  //   ต้องแยก RN / PN คนละกอง: swap ในกลุ่มเดียวกัน วันเดียวกัน → จำนวน N ต่อวันของกลุ่มคงเดิม
+  //   (ถ้ารวมกอง จะย้าย N จาก RN ไป PN วันเดียวกัน → RN ขาด coverage)
+  function balanceN(group: Nurse[]) {
+    for (let iter = 0; iter < 3; iter++) {
+      const nCounts = new Map(group.map(n => [n.id, shiftCount(sc, n.id, 'N', days)]))
+      const sorted  = [...group].sort((a, b) => (nCounts.get(b.id) ?? 0) - (nCounts.get(a.id) ?? 0))
+      let swapped = false
+      outer:
+      for (let hi = 0; hi < sorted.length - 1; hi++) {
+        for (let lo = sorted.length - 1; lo > hi; lo--) {
+          const hiN = nCounts.get(sorted[hi].id) ?? 0
+          const loN = nCounts.get(sorted[lo].id) ?? 0
+          if (hiN - loN <= 2) break outer
+          const hiNurse = sorted[hi]
+          const loNurse = sorted[lo]
+          for (let d = 1; d <= days; d++) {
+            if (getS(sc, hiNurse.id, d) !== 'N') continue
+            if (getS(sc, loNurse.id, d) !== 'O') continue
+            if (isPrelock(hiNurse.id, d) || isPrelock(loNurse.id, d)) continue
+            if (!hardOk(loNurse, d, 'N')) continue
+            setS(sc, hiNurse.id, d, 'O')
+            setS(sc, loNurse.id, d, 'N')
+            nCounts.set(hiNurse.id, hiN - 1)
+            nCounts.set(loNurse.id, loN + 1)
+            swapped = true
+            break
+          }
+          if (swapped) break outer
         }
-        if (swapped) break outer
       }
+      if (!swapped) break
     }
-    if (!swapped) break
   }
+  balanceN(rnReg)
+  balanceN(pnReg)
 
   // Pass 10: assign Incharge (I) + Team Lead (TL) per shift
   const canI  = new Set(['CNS', 'RN4', 'RN3', 'CO'])
@@ -447,6 +454,14 @@ export function runAutoSchedule(
     }
     if (rnNCount < effRnN(d)) {
       warnings.push({ day: d, type: 'coverage_short', msg: `วันที่ ${d} N: RN ขาด (${rnNCount}/${effRnN(d)})${oh}`, severity: 'warn' })
+    }
+    const pnDCount = countOnDay(sc, pnAll, d, 'D')
+    const pnNCount = countOnDay(sc, pnReg, d, 'N')
+    if (pnDCount < cfg.pnD) {
+      warnings.push({ day: d, type: 'coverage_short', msg: `วันที่ ${d} D: PN ขาด (${pnDCount}/${cfg.pnD})`, severity: 'crit' })
+    }
+    if (pnNCount < cfg.pnN) {
+      warnings.push({ day: d, type: 'coverage_short', msg: `วันที่ ${d} N: PN ขาด (${pnNCount}/${cfg.pnN})`, severity: 'warn' })
     }
   }
 
