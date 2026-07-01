@@ -90,11 +90,40 @@ export const DEFAULT_ICU_PN: Nurse[] = [
   { id: 'IP012', name: 'ยลดา พัฒนจักร์',      position: 'PN', group: 'PN', order: 12, active: true },
 ]
 
+// ── IPD Ward 6A (จาก ตารางทุกแผนก.pdf หน้า 12-13 · best-effort จากสแกน — ต้องตรวจชื่อ) ──
+// level (RN1/2/3) คำนวณจากวันเริ่มงาน: <2ปี=L1, 2-4ปี=L2, >4ปี=L3 (ณ ก.ค.69)
+export const DEFAULT_W6A_RN: Nurse[] = [
+  { id: 'W6A_R01', name: 'จินตนา ศิลาไทย',        position: 'CNS', group: 'RN', order: 1,  active: true, start_date: '1 พ.ค.2554' },
+  { id: 'W6A_R02', name: 'ศจิภา ปุ่มธรรมไทย',      position: 'RN2', group: 'RN', order: 2,  active: true, start_date: '1 ก.ค.2567' },
+  { id: 'W6A_R03', name: 'ธนภณ ประชาวรรัตน์',      position: 'RN3', group: 'RN', order: 3,  active: true, start_date: '1 ก.ค.2563' },
+  { id: 'W6A_R04', name: 'อนุรัตน์ ธุระวชิร',       position: 'RN2', group: 'RN', order: 4,  active: true, start_date: '1 เม.ย.2566' },
+  { id: 'W6A_R05', name: 'ณัฐธิดา ญาติไทย',        position: 'RN2', group: 'RN', order: 5,  active: true, start_date: '1 ก.ค.2566' },
+  { id: 'W6A_R06', name: 'อัญชุลีชนก (ตรวจชื่อ)',   position: 'RN2', group: 'RN', order: 6,  active: true, start_date: '1 ก.ค.2567' },
+  { id: 'W6A_R07', name: '⚠ แก้ชื่อ 6A-RN-07',     position: 'RN2', group: 'RN', order: 7,  active: true },
+  { id: 'W6A_R08', name: '⚠ แก้ชื่อ 6A-RN-08',     position: 'RN1', group: 'RN', order: 8,  active: true, start_date: '1 ก.ค.2568' },
+  { id: 'W6A_R09', name: 'อัยยาวีร์ (ตรวจชื่อ)',    position: 'RN3', group: 'RN', order: 9,  active: true, start_date: '16 ก.ค.2561' },
+  { id: 'W6A_R10', name: '⚠ แก้ชื่อ 6A-RN-10',     position: 'RN1', group: 'RN', order: 10, active: true, start_date: '16 มิ.ย.2569' },
+]
+
+export const DEFAULT_W6A_PN: Nurse[] = [
+  { id: 'W6A_P01', name: '⚠ แก้ชื่อ 6A-PN-01', position: 'PN', group: 'PN', order: 1,  active: true },
+  { id: 'W6A_P02', name: '⚠ แก้ชื่อ 6A-PN-02', position: 'PN', group: 'PN', order: 2,  active: true },
+  { id: 'W6A_P03', name: '⚠ แก้ชื่อ 6A-PN-03', position: 'PN', group: 'PN', order: 3,  active: true },
+  { id: 'W6A_P04', name: '⚠ แก้ชื่อ 6A-PN-04', position: 'PN', group: 'PN', order: 4,  active: true },
+  { id: 'W6A_P05', name: '⚠ แก้ชื่อ 6A-PN-05', position: 'PN', group: 'PN', order: 5,  active: true },
+  { id: 'W6A_P06', name: '⚠ แก้ชื่อ 6A-PN-06', position: 'PN', group: 'PN', order: 6,  active: true },
+  { id: 'W6A_P07', name: '⚠ แก้ชื่อ 6A-PN-07', position: 'PN', group: 'PN', order: 7,  active: true },
+  { id: 'W6A_P08', name: '⚠ แก้ชื่อ 6A-PN-08', position: 'PN', group: 'PN', order: 8,  active: true },
+  { id: 'W6A_P09', name: '⚠ แก้ชื่อ 6A-PN-09', position: 'PN', group: 'PN', order: 9,  active: true },
+  { id: 'W6A_P10', name: '⚠ แก้ชื่อ 6A-PN-10 (WC)', position: 'WC', group: 'PN', order: 10, active: true },
+]
+
 export function getDefaultNurses(dept: string): Nurse[] {
   switch (dept) {
     case 'CCU': return [...DEFAULT_CCU_RN, ...DEFAULT_CCU_PN]
     case 'NCU': return [...DEFAULT_NCU_RN, ...DEFAULT_NCU_PN]
     case 'ICU': return [...DEFAULT_ICU_RN, ...DEFAULT_ICU_PN]
+    case 'W6A': return [...DEFAULT_W6A_RN, ...DEFAULT_W6A_PN]
     default:    return []
   }
 }
