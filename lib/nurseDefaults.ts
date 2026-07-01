@@ -118,12 +118,41 @@ export const DEFAULT_W6A_PN: Nurse[] = [
   { id: 'W6A_P10', name: '⚠ แก้ชื่อ 6A-PN-10 (WC)', position: 'WC', group: 'PN', order: 10, active: true },
 ]
 
+// สร้าง skeleton สำหรับ IPD ward — จำนวนคนถูกต้องจาก PDF, ชื่อเป็น placeholder ให้ HOD แก้
+// (สแกนเบลอ/ปน ward — ไม่กุชื่อ-วันเริ่มงานปลอม; กรอกในหน้าบุคลากร แล้ว level คำนวณอัตโนมัติ)
+function wardSkeleton(dept: string, rnCount: number, pnCount: number): Nurse[] {
+  const list: Nurse[] = []
+  for (let i = 1; i <= rnCount; i++) {
+    list.push({ id: `${dept}_R${String(i).padStart(2, '0')}`, name: `⚠ แก้ชื่อ ${dept}-RN-${i}`, position: 'RN2', group: 'RN', order: i, active: true })
+  }
+  for (let i = 1; i <= pnCount; i++) {
+    list.push({ id: `${dept}_P${String(i).padStart(2, '0')}`, name: `⚠ แก้ชื่อ ${dept}-PN-${i}`, position: 'PN', group: 'PN', order: i, active: true })
+  }
+  return list
+}
+
+// จำนวนคนต่อ ward (นับจาก ตารางทุกแผนก.pdf) — ปรับเพิ่ม/ลบได้ในหน้าบุคลากร
+const IPD_WARD_SIZE: Record<string, [number, number]> = {
+  W6B:  [12, 12],
+  W7A:  [9, 11],
+  W8A:  [10, 10],
+  W9A:  [10, 10],
+  W10A: [10, 9],
+  W11A: [8, 8],
+  W12A: [14, 9],
+}
+
 export function getDefaultNurses(dept: string): Nurse[] {
   switch (dept) {
     case 'CCU': return [...DEFAULT_CCU_RN, ...DEFAULT_CCU_PN]
     case 'NCU': return [...DEFAULT_NCU_RN, ...DEFAULT_NCU_PN]
     case 'ICU': return [...DEFAULT_ICU_RN, ...DEFAULT_ICU_PN]
     case 'W6A': return [...DEFAULT_W6A_RN, ...DEFAULT_W6A_PN]
-    default:    return []
+    default:
+      if (IPD_WARD_SIZE[dept]) {
+        const [rn, pn] = IPD_WARD_SIZE[dept]
+        return wardSkeleton(dept, rn, pn)
+      }
+      return []
   }
 }
