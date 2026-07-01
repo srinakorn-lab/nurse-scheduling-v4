@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import type { Nurse, NursePosition, NurseGroup } from '@/lib/types'
 import { POSITIONS } from '@/lib/constants'
+import { rnLevelFromStartDate, yearsOfService } from '@/lib/level'
 
 const POSITION_COLOR: Record<string, string> = {
   HOD: 'bg-purple-100 text-purple-700',
@@ -23,12 +24,13 @@ interface FormState {
   nickname: string
   phone: string
   emp_code: string
+  start_date: string
   day_only: boolean
 }
 
 const EMPTY_FORM: FormState = {
   name: '', position: 'RN2', group: 'RN',
-  nickname: '', phone: '', emp_code: '', day_only: false,
+  nickname: '', phone: '', emp_code: '', start_date: '', day_only: false,
 }
 
 export default function StaffModal({
@@ -55,9 +57,21 @@ export default function StaffModal({
     setForm({
       name: n.name, position: n.position, group: n.group,
       nickname: n.nickname ?? '', phone: n.phone ?? '',
-      emp_code: n.emp_code ?? '', day_only: n.day_only ?? false,
+      emp_code: n.emp_code ?? '', start_date: n.start_date ?? '', day_only: n.day_only ?? false,
     })
     setEditingId(n.id); setShowForm(true)
+  }
+
+  // เปลี่ยนวันเริ่มงาน → ถ้าเป็น RN ให้คำนวณ level (RN1/2/3) อัตโนมัติ
+  function onStartDateChange(v: string) {
+    setForm(f => {
+      const next = { ...f, start_date: v }
+      if (f.group === 'RN' && !['CNS', 'RN4', 'CO', 'HOD'].includes(f.position)) {
+        const lvl = rnLevelFromStartDate(v)
+        if (lvl) next.position = lvl
+      }
+      return next
+    })
   }
   function save() {
     if (!form.name.trim()) return
@@ -134,6 +148,25 @@ export default function StaffModal({
               </select>
               <input value={form.emp_code} onChange={e => setForm({ ...form, emp_code: e.target.value })}
                 placeholder="รหัสพนักงาน" className={fieldCls} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <input value={form.start_date} onChange={e => onStartDateChange(e.target.value)}
+                  placeholder="วันเริ่มงาน (พ.ศ.) เช่น 1 ก.ค.2565" className={fieldCls} />
+                {(() => {
+                  const yrs = yearsOfService(form.start_date)
+                  if (yrs == null) return null
+                  const lvl = form.position === 'RN1' ? 'L1' : form.position === 'RN2' ? 'L2' : form.position === 'RN3' ? 'L3' : ''
+                  return (
+                    <span className="whitespace-nowrap text-xs text-teal-600 font-medium">
+                      อายุงาน {yrs.toFixed(1)} ปี{lvl && form.group === 'RN' ? ` · ${lvl}` : ''}
+                    </span>
+                  )
+                })()}
+              </div>
+              {form.group === 'RN' && !['CNS', 'RN4', 'CO', 'HOD'].includes(form.position) && (
+                <div className="text-[10px] text-gray-400 mt-1">RN ในวอร์ด IPD: ระบบตั้ง level อัตโนมัติจากวันเริ่มงาน (&lt;2ปี=L1, 2-4ปี=L2, &gt;4ปี=L3)</div>
+              )}
             </div>
             <label className="flex items-center gap-2 text-sm text-gray-600">
               <input type="checkbox" checked={form.day_only}
