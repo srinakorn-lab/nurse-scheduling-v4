@@ -98,30 +98,30 @@ export const DEFAULT_W6A_RN: Nurse[] = [
   { id: 'W6A_R00', name: 'ดารุณี ชุมสนาม',       position: 'CO',  group: 'RN', order: 0,  active: true, start_date: '1 เม.ย.2550', nickname: 'ผจก.แผนก' },
   { id: 'W6A_R01', name: 'จินตนา สีดาโคตร์',      position: 'CNS', group: 'RN', order: 1,  active: true, start_date: '1 เม.ย.2554', nickname: 'เอฟ' },
   { id: 'W6A_R02', name: 'อรียา ตุ่นกระโทก',      position: 'RN2', group: 'RN', order: 2,  active: true, start_date: '1 ต.ค.2567',  nickname: 'มายค์' },
-  { id: 'W6A_R03', name: 'ธนภรณ์ ปรางสวรรค์',     position: 'RN3', group: 'RN', order: 3,  active: true, start_date: '1 ก.ย.2563',  nickname: 'อุ้ย' },
-  { id: 'W6A_R04', name: 'ณภัสร์นันท์ สุวรรณ',    position: 'RN2', group: 'RN', order: 4,  active: true, start_date: '1 เม.ย.2566', nickname: 'ใหม' },
+  { id: 'W6A_R03', name: 'ธนภรณ์ ปรางสวรรค์',     position: 'RN4', group: 'RN', order: 3,  active: true, start_date: '1 ก.ย.2563',  nickname: 'อุ้ย' },
+  { id: 'W6A_R04', name: 'ณภัสร์นันท์ สุวรรณ',    position: 'RN3', group: 'RN', order: 4,  active: true, start_date: '1 เม.ย.2566', nickname: 'ใหม' },
   { id: 'W6A_R05', name: 'อนุชธิดา สารโคตร',      position: 'RN1', group: 'RN', order: 5,  active: true, start_date: '1 ก.ค.2568',  nickname: 'กิฟท์' },
   { id: 'W6A_R06', name: 'ธัญญลักษณ์ เพื่อแผ่',    position: 'RN2', group: 'RN', order: 6,  active: true, start_date: '1 ก.ย.2567',  nickname: 'ป้อน' },
   { id: 'W6A_R07', name: 'รานี หล้าเดือน',        position: 'RN1', group: 'RN', order: 7,  active: true, start_date: '1 มิ.ย.2568', nickname: 'นุ่น' },
-  { id: 'W6A_R08', name: 'ภันทิลา ปัดถมา',        position: 'RN2', group: 'RN', order: 8,  active: true, start_date: '1 ก.ย.2565',  nickname: 'กิ๊ก' },
-  { id: 'W6A_R09', name: 'อ้อมจันทร์ คูลี',        position: 'RN3', group: 'RN', order: 9,  active: true, start_date: '16 ก.พ.2561', nickname: 'อ้อม' },
+  { id: 'W6A_R08', name: 'ภันทิลา ปัดถมา',        position: 'RN3', group: 'RN', order: 8,  active: true, start_date: '1 ก.ย.2565',  nickname: 'กิ๊ก' },
+  { id: 'W6A_R09', name: 'อ้อมจันทร์ คูลี',        position: 'RN4', group: 'RN', order: 9,  active: true, start_date: '16 ก.พ.2561', nickname: 'อ้อม' },
   { id: 'W6A_R10', name: 'จิระนันท์ หัดสูงเนิน',   position: 'RN1', group: 'RN', order: 10, active: true, start_date: '16 มิ.ย.2569', nickname: 'ไอซ์' },
 ]
 
 // ── Ward 6B (RN — รูป IMG_5073) · #8-11 tag W7A (ขึ้นเวรใน 6B) ──
 export const DEFAULT_W6B_RN: Nurse[] = [
   { id: 'W6B_R00', name: 'ศุภัสรา เทียนเมาะ',      position: 'CO',  group: 'RN', order: 0,  active: true, start_date: '1 ก.ค.2547',  nickname: 'จอย/ผจก.' },
-  { id: 'W6B_R01', name: 'กัญญารัตน์ วิภาสวัสดิ์',  position: 'RN2', group: 'RN', order: 1,  active: true, start_date: '1 ต.ค.2565',  nickname: 'เอร่น' },
+  { id: 'W6B_R01', name: 'กัญญารัตน์ วิภาสวัสดิ์',  position: 'RN3', group: 'RN', order: 1,  active: true, start_date: '1 ต.ค.2565',  nickname: 'เอร่น' },
   { id: 'W6B_R02', name: 'สุวนันท์ ที่บ้านบ่อ',     position: 'RN2', group: 'RN', order: 2,  active: true, start_date: '',            nickname: 'แดง (ลาคลอด)' },
   { id: 'W6B_R03', name: 'ศรัณย์รัชต์ สุวรรณ',     position: 'RN2', group: 'RN', order: 3,  active: true, start_date: '',            nickname: 'มุก' },
   { id: 'W6B_R04', name: 'สุพัตรา ชัยภา',         position: 'RN2', group: 'RN', order: 4,  active: true, start_date: '1 ส.ค.2567',  nickname: 'โบว์' },
   { id: 'W6B_R05', name: 'เสาวลักษณ์ จดไว้',      position: 'RN2', group: 'RN', order: 5,  active: true, start_date: '',            nickname: 'ดาด้า' },
   { id: 'W6B_R06', name: 'มยุรา สีดาแดง',         position: 'RN2', group: 'RN', order: 6,  active: true, start_date: '16 เม.ย.2566', nickname: 'แอ้ว' },
   { id: 'W6B_R07', name: 'บัณฑิตา ของดี',         position: 'RN2', group: 'RN', order: 7,  active: true, start_date: '1 พ.ค.2567',  nickname: 'มุก' },
-  { id: 'W6B_R08', name: 'กมลทิพย์ จรูญเนตร (W7A)', position: 'RN2', group: 'RN', order: 8,  active: true, start_date: '1 พ.ย.2565',  nickname: 'แนว' },
-  { id: 'W6B_R09', name: 'อภิญญา ฉายกิ่ง (W7A)',   position: 'RN2', group: 'RN', order: 9,  active: true, start_date: '',            nickname: 'กิ๊ฟ' },
-  { id: 'W6B_R10', name: 'จุฬารักษณ์ ศรีฮาด (W7A)', position: 'RN3', group: 'RN', order: 10, active: true, start_date: '1 ส.ค.2562',  nickname: 'จิ๋ม' },
-  { id: 'W6B_R11', name: 'ปรางฤทัย แพงทอง (W7A)',  position: 'RN3', group: 'RN', order: 11, active: true, start_date: '1 ก.ย.2561',  nickname: 'น้ำ' },
+  { id: 'W6B_R08', name: 'กมลทิพย์ จรูญเนตร (W7A)', position: 'RN4', group: 'RN', order: 8,  active: true, start_date: '1 พ.ย.2565',  nickname: 'แน่ว' },
+  { id: 'W6B_R09', name: 'อภิญญา ฉายกิ่ง (W7A)',   position: 'RN4', group: 'RN', order: 9,  active: true, start_date: '',            nickname: 'กิ๊ฟ' },
+  { id: 'W6B_R10', name: 'จุฬารักษณ์ ศรีฮาด (W7A)', position: 'RN4', group: 'RN', order: 10, active: true, start_date: '1 ส.ค.2562',  nickname: 'จิ๋ม' },
+  { id: 'W6B_R11', name: 'ปรางฤทัย แพงทอง (W7A)',  position: 'RN4', group: 'RN', order: 11, active: true, start_date: '1 ก.ย.2561',  nickname: 'น้ำ' },
   { id: 'W6B_R12', name: 'แพรวพรรณ ก้องสูงเนิน',   position: 'RN1', group: 'RN', order: 12, active: true, start_date: '20 พ.ค.2569', nickname: 'แพรว' },
 ]
 
@@ -216,6 +216,96 @@ export const DEFAULT_W10A_PN: Nurse[] = [
   { id: 'W10A_P09', name: 'จันธิมาภรณ์ ภักดี',      position: 'PN', group: 'PN', order: 9, active: true, start_date: '1 เม.ย.2568', nickname: 'ฝน' },
 ]
 
+// ── Ward 6A (PN — รูป IMG_5077) ──
+export const DEFAULT_W6A_PN: Nurse[] = [
+  { id: 'W6A_P01', name: 'ธันยพร โซตินอก',        position: 'PN', group: 'PN', order: 1,  active: true, start_date: '1 พ.ค.2564',  nickname: 'เอ๊ะ' },
+  { id: 'W6A_P02', name: 'ฐิตาภา หวังช่วยกลาง',    position: 'PN', group: 'PN', order: 2,  active: true, start_date: '16 ก.ค.2568', nickname: 'อัญ' },
+  { id: 'W6A_P03', name: 'เมทาวี ทวีพูน',          position: 'PN', group: 'PN', order: 3,  active: true, start_date: '1 ก.ค.2564',  nickname: 'มิว' },
+  { id: 'W6A_P04', name: 'นุชจิรา พรมชาติ',        position: 'PN', group: 'PN', order: 4,  active: true, start_date: '16 พ.ค.2568', nickname: 'เปิ้ล' },
+  { id: 'W6A_P05', name: 'รุ่งทิพย์ อาศัยไร่',      position: 'PN', group: 'PN', order: 5,  active: true, start_date: '1 ก.พ.2566',  nickname: 'แนน' },
+  { id: 'W6A_P06', name: 'ธรารัตน์ น้อยลี',         position: 'PN', group: 'PN', order: 6,  active: true, start_date: '1 ก.ย.2564',  nickname: 'ป๊อบ' },
+  { id: 'W6A_P07', name: 'จิราพร พิมเห็ม',         position: 'PN', group: 'PN', order: 7,  active: true, start_date: '16 ส.ค.2566', nickname: 'เปรียว' },
+  { id: 'W6A_P08', name: 'กมลรัตน์ แหวนวงค์',      position: 'PN', group: 'PN', order: 8,  active: true, start_date: '1 ม.ค.2562',  nickname: 'จอย' },
+  { id: 'W6A_P09', name: 'สุพัตรา พรมดี',          position: 'PN', group: 'PN', order: 9,  active: true, start_date: '16 ก.ย.2558', nickname: 'หนุ่ย' },
+  { id: 'W6A_P10', name: 'สุวรรณิกา บุตรเสมียน',    position: 'PN', group: 'PN', order: 10, active: true, start_date: '1 ก.ย.2550',  nickname: 'อุ้ม' },
+  { id: 'W6A_P11', name: 'มาลัยวัลย์ จันนา',        position: 'WC', group: 'PN', order: 11, active: true, start_date: '',            nickname: 'น้อง', day_only: true },
+]
+
+// ── Ward 6B (PN — รูป IMG_5059/5074/5075) ──
+export const DEFAULT_W6B_PN: Nurse[] = [
+  { id: 'W6B_P00', name: 'ธีรพร ชุรีกร',           position: 'WC', group: 'PN', order: 0,  active: true, start_date: '',            nickname: 'กุ้ง', day_only: true },
+  { id: 'W6B_P01', name: 'สายใจ วงษา',            position: 'PN', group: 'PN', order: 1,  active: true, start_date: '1 ก.ย.2552',  nickname: 'หนุ่ย' },
+  { id: 'W6B_P02', name: 'วนิดา จรูญภักดิ์',        position: 'PN', group: 'PN', order: 2,  active: true, start_date: '1 ก.ย.2553',  nickname: 'ติ๊ก' },
+  { id: 'W6B_P03', name: 'ชนัดฎา เทพกุญชร',       position: 'PN', group: 'PN', order: 3,  active: true, start_date: '1 มี.ค.2561', nickname: 'ออม' },
+  { id: 'W6B_P04', name: 'ดาราวรรณ ก้อนจันเทศ',    position: 'PN', group: 'PN', order: 4,  active: true, start_date: '16 ก.ย.2554', nickname: 'ฝน' },
+  { id: 'W6B_P05', name: 'รุ่งทิวา เกิดบัว',        position: 'PN', group: 'PN', order: 5,  active: true, start_date: '',            nickname: 'มุก' },
+  { id: 'W6B_P06', name: 'สาริกา อาญาเมือง',       position: 'PN', group: 'PN', order: 6,  active: true, start_date: '1 ก.พ.2566',  nickname: 'เตียง' },
+  { id: 'W6B_P07', name: 'กรรณิการ์ สมศรี',        position: 'PN', group: 'PN', order: 7,  active: true, start_date: '1 ก.ค.2559',  nickname: 'บิว' },
+  { id: 'W6B_P08', name: 'อรทัย ชัยมา',            position: 'PN', group: 'PN', order: 8,  active: true, start_date: '1 ก.ย.2566',  nickname: 'ก้อย' },
+  { id: 'W6B_P09', name: 'จิราพร ศรีสุภา',          position: 'PN', group: 'PN', order: 9,  active: true, start_date: '16 ส.ค.2566', nickname: 'จิน' },
+  { id: 'W6B_P10', name: 'ดวงสุรีย์ นัยนิตย์',       position: 'PN', group: 'PN', order: 10, active: true, start_date: '16 ส.ค.2556', nickname: 'ยุ้ย' },
+  { id: 'W6B_P11', name: 'ศศิกานต์ บัวแสง',         position: 'PN', group: 'PN', order: 11, active: true, start_date: '',            nickname: 'กานต์' },
+  { id: 'W6B_P12', name: 'สุภารัตน์ สิมสาร',        position: 'PN', group: 'PN', order: 12, active: true, start_date: '1 ก.ย.2567',  nickname: 'แคท' },
+  { id: 'W6B_P13', name: 'วาสนา เลือดทหาร',        position: 'PN', group: 'PN', order: 13, active: true, start_date: '1 ส.ค.2566',  nickname: 'เอริ่น' },
+  { id: 'W6B_P14', name: 'กานต์ธิดา บุรีวงค์',      position: 'PN', group: 'PN', order: 14, active: true, start_date: '1 ก.ค.2568',  nickname: 'นิว' },
+  { id: 'W6B_P15', name: 'พรอรุณ จิปอมจา',        position: 'PN', group: 'PN', order: 15, active: true, start_date: '1 พ.ค.2560',  nickname: 'กุ้งนาง' },
+  { id: 'W6B_P16', name: 'ธิวารัต แป้นแหลม',       position: 'PN', group: 'PN', order: 16, active: true, start_date: '1 ส.ค.2557',  nickname: 'เรย์' },
+]
+
+// ── Ward 8A (RN — รูป IMG_5071) ──
+export const DEFAULT_W8A_RN: Nurse[] = [
+  { id: 'W8A_R00', name: 'พิธพร คนคม',            position: 'CO',  group: 'RN', order: 0,  active: true, start_date: '',            nickname: 'ผจก.แผนก' },
+  { id: 'W8A_R01', name: 'นันทิยา คำก้อน',         position: 'RN3', group: 'RN', order: 1,  active: true, start_date: '1 เม.ย.2550', nickname: 'เปิ้ล' },
+  { id: 'W8A_R02', name: 'เกสริน ชุมเงิน',          position: 'RN3', group: 'RN', order: 2,  active: true, start_date: '1 เม.ย.2554', nickname: 'ติว' },
+  { id: 'W8A_R03', name: 'วงศ์พระจันทร์ ดวงหม่อง',  position: 'RN3', group: 'RN', order: 3,  active: true, start_date: '1 มิ.ย.2559', nickname: 'เมย์' },
+  { id: 'W8A_R04', name: 'อารีย์ สายปาน',          position: 'RN3', group: 'RN', order: 4,  active: true, start_date: '1 เม.ย.2560', nickname: 'น้ำ' },
+  { id: 'W8A_R05', name: 'อธิติญา ประสานพันธุ',     position: 'RN3', group: 'RN', order: 5,  active: true, start_date: '1 พ.ค.2561',  nickname: 'เค้ก' },
+  { id: 'W8A_R06', name: 'นวพร จั่นนิน',           position: 'RN2', group: 'RN', order: 6,  active: true, start_date: '16 พ.ย.2565', nickname: 'แพรว' },
+  { id: 'W8A_R07', name: 'พุทธรักษ์ เทียมชัยภูมิ',   position: 'RN2', group: 'RN', order: 7,  active: true, start_date: '16 ก.พ.2566', nickname: 'แตงกวา' },
+  { id: 'W8A_R08', name: 'ลัทธวรรณ วิสูงเร',        position: 'RN2', group: 'RN', order: 8,  active: true, start_date: '1 เม.ย.2566', nickname: 'วรรณ' },
+  { id: 'W8A_R09', name: 'เพ็ญพิศุทธิ์ เรืองไสยพร',  position: 'RN2', group: 'RN', order: 9,  active: true, start_date: '1 พ.ค.2566',  nickname: 'น้ำหวาน' },
+  { id: 'W8A_R10', name: 'พัชญาภรณ์ อนุสา',        position: 'RN1', group: 'RN', order: 10, active: true, start_date: '1 มิ.ย.2569', nickname: 'แพท' },
+]
+
+// ── Ward 8A (PN — รูป IMG_5072) ──
+export const DEFAULT_W8A_PN: Nurse[] = [
+  { id: 'W8A_P01', name: 'ชนิษฐา ปาปะสา',         position: 'PN', group: 'PN', order: 1,  active: true, start_date: '16 ต.ค.2551', nickname: 'โอ๋' },
+  { id: 'W8A_P02', name: 'สุธาวัลย์ กุญชรรักษ์',     position: 'PN', group: 'PN', order: 2,  active: true, start_date: '16 ก.พ.2561', nickname: 'ฟ้า' },
+  { id: 'W8A_P03', name: 'วัลศิกา นิวงษา',          position: 'PN', group: 'PN', order: 3,  active: true, start_date: '1 ส.ค.2558',  nickname: 'อาย' },
+  { id: 'W8A_P04', name: 'ศรีวิพัฒน์ จำสอน',        position: 'PN', group: 'PN', order: 4,  active: true, start_date: '1 เม.ย.2558', nickname: 'เหมย' },
+  { id: 'W8A_P05', name: 'อรณิชา ทานะ',           position: 'PN', group: 'PN', order: 5,  active: true, start_date: '1 ก.ย.2561',  nickname: 'ปุ๊ก' },
+  { id: 'W8A_P06', name: 'กฤตชญาณ์ หมายกล้า',     position: 'PN', group: 'PN', order: 6,  active: true, start_date: '1 ก.ย.2566',  nickname: 'เปิ้ล' },
+  { id: 'W8A_P07', name: 'อรัญญา ธรรมสิมมา',      position: 'PN', group: 'PN', order: 7,  active: true, start_date: '1 ก.ย.2566',  nickname: 'สาย' },
+  { id: 'W8A_P08', name: 'ศิริลักษณ์ จำปาทอง',      position: 'PN', group: 'PN', order: 8,  active: true, start_date: '16 ก.พ.2567', nickname: 'แน๊ม' },
+  { id: 'W8A_P09', name: 'วิยะดา ธุรีวงษ์',          position: 'PN', group: 'PN', order: 9,  active: true, start_date: '16 ก.ย.2566', nickname: 'ชมพู่' },
+  { id: 'W8A_P10', name: 'ณภาพร วินทระ',          position: 'PN', group: 'PN', order: 10, active: true, start_date: '16 ต.ค.2567', nickname: 'แป้ง' },
+  { id: 'W8A_P11', name: 'ชัญญานุช ใจจันทร์',       position: 'WC', group: 'PN', order: 11, active: true, start_date: '1 ส.ค.2566',  nickname: 'ตั๊ก', day_only: true },
+]
+
+// ── Ward 12A (RN — รูป IMG_5060 หน้า 2 · level ตามเอกสาร · หน้า 1 ยังไม่มีรูปชัด) ──
+export const DEFAULT_W12A_RN: Nurse[] = [
+  { id: 'W12A_R00', name: 'กมลชนก อุปมัย',        position: 'CO',  group: 'RN', order: 0,  active: true, start_date: '1 ม.ค.2554',  nickname: 'กิ๊ก/ผจก.W12A+W11A' },
+  { id: 'W12A_R08', name: 'สมคิด ศรีคงรักษ์',      position: 'CNS', group: 'RN', order: 8,  active: true, start_date: '1 เม.ย.2550', nickname: 'นิ' },
+  { id: 'W12A_R09', name: 'วิไลพร บุญเรือง',       position: 'RN4', group: 'RN', order: 9,  active: true, start_date: '1 มิ.ย.2556', nickname: 'โหน่ง' },
+  { id: 'W12A_R10', name: 'ธนาพร วันนา',          position: 'RN4', group: 'RN', order: 10, active: true, start_date: '1 ก.ย.2559',  nickname: 'เบียร์' },
+  { id: 'W12A_R11', name: 'อรุณกมล บัวศรี',        position: 'RN3', group: 'RN', order: 11, active: true, start_date: '1 ก.ค.2562',  nickname: 'มด' },
+  { id: 'W12A_R12', name: 'ศรสวรรค์ ศักดิ์ศรี',      position: 'RN2', group: 'RN', order: 12, active: true, start_date: '1 เม.ย.2564', nickname: 'ปุ๊กกี้ (ลาคลอด)' },
+  { id: 'W12A_R13', name: 'บุญญาพร บุสบง',        position: 'RN1', group: 'RN', order: 13, active: true, start_date: '1 มี.ค.2569', nickname: 'พลอย (W9A)' },
+]
+
+// ── Ward 12A (PN — รูป IMG_5062 · วันที่เอกสารเป็น ค.ศ. แปลงเป็น พ.ศ. แล้ว) ──
+export const DEFAULT_W12A_PN: Nurse[] = [
+  { id: 'W12A_P01', name: 'กานต์รวี อักษร',        position: 'PN', group: 'PN', order: 1, active: true, start_date: '1 ก.ย.2548',  nickname: 'ติ๊ก' },
+  { id: 'W12A_P02', name: 'พลอยลดา วิชัยยา',      position: 'PN', group: 'PN', order: 2, active: true, start_date: '1 มิ.ย.2562', nickname: 'เอย' },
+  { id: 'W12A_P03', name: 'ศิตา ดาตาวงต์',         position: 'PN', group: 'PN', order: 3, active: true, start_date: '15 ส.ค.2559', nickname: 'ป๊อบ' },
+  { id: 'W12A_P04', name: 'อุบล สนธัมย์',          position: 'PN', group: 'PN', order: 4, active: true, start_date: '1 พ.ย.2560',  nickname: 'เก๋' },
+  { id: 'W12A_P05', name: 'วรรณนภา เลาะสันเทียะ',  position: 'PN', group: 'PN', order: 5, active: true, start_date: '1 ส.ค.2559',  nickname: 'แคท' },
+  { id: 'W12A_P06', name: 'ปัทมา สุริยนต์',         position: 'PN', group: 'PN', order: 6, active: true, start_date: '1 เม.ย.2556', nickname: 'หนูนา' },
+  { id: 'W12A_P07', name: 'วารุณี ชมภูทอง',        position: 'PN', group: 'PN', order: 7, active: true, start_date: '1 เม.ย.2561', nickname: 'แพรวา' },
+  { id: 'W12A_P08', name: 'ประภาพร กายแก้ว',      position: 'PN', group: 'PN', order: 8, active: true, start_date: '1 ก.ย.2566',  nickname: 'ครีม' },
+  { id: 'W12A_P09', name: 'ศศิกานต์ แป้นกระโทก',   position: 'PN', group: 'PN', order: 9, active: true, start_date: '1 ก.ย.2566',  nickname: 'มะปราง' },
+]
+
 // สร้าง skeleton — จำนวนคนถูกต้องจาก PDF, ชื่อ placeholder ให้ HOD แก้ (ยังไม่มีรูปชัด)
 function wardSkeleton(dept: string, rnCount: number, pnCount: number): Nurse[] {
   const list: Nurse[] = []
@@ -233,14 +323,14 @@ export function getDefaultNurses(dept: string): Nurse[] {
     case 'CCU': return [...DEFAULT_CCU_RN, ...DEFAULT_CCU_PN]
     case 'NCU': return [...DEFAULT_NCU_RN, ...DEFAULT_NCU_PN]
     case 'ICU': return [...DEFAULT_ICU_RN, ...DEFAULT_ICU_PN]
-    case 'W6A': return [...DEFAULT_W6A_RN, ...wardSkeleton('W6A', 0, 10)]  // PN ยังไม่มีรูป
-    case 'W6B': return [...DEFAULT_W6B_RN, ...wardSkeleton('W6B', 0, 16)]  // PN มีแค่แถวท้าย
+    case 'W6A': return [...DEFAULT_W6A_RN, ...DEFAULT_W6A_PN]              // ครบทั้งคู่
+    case 'W6B': return [...DEFAULT_W6B_RN, ...DEFAULT_W6B_PN]              // ครบทั้งคู่
     case 'W7A': return [...DEFAULT_W7A_RN, ...DEFAULT_W7A_PN]              // ครบทั้งคู่
+    case 'W8A': return [...DEFAULT_W8A_RN, ...DEFAULT_W8A_PN]              // ครบทั้งคู่
     case 'W9A': return [...DEFAULT_W9A_RN, ...DEFAULT_W9A_PN]              // ครบทั้งคู่
     case 'W10A': return [...DEFAULT_W10A_RN, ...DEFAULT_W10A_PN]           // ครบทั้งคู่
-    case 'W8A':  return wardSkeleton('W8A', 10, 10)
+    case 'W12A': return [...DEFAULT_W12A_RN, ...wardSkeleton('W12A', 7, 0), ...DEFAULT_W12A_PN]  // RN หน้า 1 (7 คน) ยังไม่มีรูป
     case 'W11A': return wardSkeleton('W11A', 8, 8)
-    case 'W12A': return wardSkeleton('W12A', 14, 9)
     default:     return []
   }
 }
