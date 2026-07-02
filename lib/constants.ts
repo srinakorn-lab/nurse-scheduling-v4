@@ -1,6 +1,7 @@
 import type { DeptConfig, ShiftType, NursePosition, NurseGroup } from './types'
 
 export const POSITIONS: { value: NursePosition; label: string; icon: string; group: NurseGroup }[] = [
+  { value: 'HOD', label: 'HOD หัวหน้าหอ', icon: '👑', group: 'RN' },
   { value: 'CNS', label: 'CNS',        icon: '⭐', group: 'RN' },
   { value: 'RN4', label: 'RN4',        icon: '🔵', group: 'RN' },
   { value: 'RN3', label: 'RN3',        icon: '🔵', group: 'RN' },

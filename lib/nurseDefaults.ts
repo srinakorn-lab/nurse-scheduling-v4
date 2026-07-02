@@ -318,7 +318,7 @@ function wardSkeleton(dept: string, rnCount: number, pnCount: number): Nurse[] {
   return list
 }
 
-export function getDefaultNurses(dept: string): Nurse[] {
+function baseNurses(dept: string): Nurse[] {
   switch (dept) {
     case 'CCU': return [...DEFAULT_CCU_RN, ...DEFAULT_CCU_PN]
     case 'NCU': return [...DEFAULT_NCU_RN, ...DEFAULT_NCU_PN]
@@ -334,4 +334,14 @@ export function getDefaultNurses(dept: string): Nurse[] {
     case 'W12A': return [...DEFAULT_W12A_RN, ...wardSkeleton('W12A', 7, 0), ...DEFAULT_W12A_PN]
     default:     return []
   }
+}
+
+export function getDefaultNurses(dept: string): Nurse[] {
+  const base = baseNurses(dept)
+  // ทุก ward ต้องมีตำแหน่ง HOD (หัวหน้าหอ) — ถ้ายังไม่มี ให้เพิ่มช่อง HOD (แก้ชื่อได้ในหน้าบุคลากร)
+  if (base.length > 0 && !base.some(n => n.position === 'HOD')) {
+    const hod: Nurse = { id: `${dept}_HOD`, name: 'หัวหน้าหอ (แก้ชื่อ)', position: 'HOD', group: 'RN', order: -1, active: true }
+    return [hod, ...base]
+  }
+  return base
 }
