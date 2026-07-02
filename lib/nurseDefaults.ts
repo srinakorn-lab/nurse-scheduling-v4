@@ -329,8 +329,9 @@ export function getDefaultNurses(dept: string): Nurse[] {
     case 'W8A': return [...DEFAULT_W8A_RN, ...DEFAULT_W8A_PN]              // ครบทั้งคู่
     case 'W9A': return [...DEFAULT_W9A_RN, ...DEFAULT_W9A_PN]              // ครบทั้งคู่
     case 'W10A': return [...DEFAULT_W10A_RN, ...DEFAULT_W10A_PN]           // ครบทั้งคู่
-    case 'W12A': return [...DEFAULT_W12A_RN, ...wardSkeleton('W12A', 7, 0), ...DEFAULT_W12A_PN]  // RN หน้า 1 (7 คน) ยังไม่มีรูป
-    case 'W11A': return wardSkeleton('W11A', 8, 8)
+    // W11A + W12A ใช้บุคลากรร่วมกัน (roster เดียวกัน) — RN หน้า 1 (7 คน) ยังเป็น skeleton รอรูปชัด
+    case 'W11A':
+    case 'W12A': return [...DEFAULT_W12A_RN, ...wardSkeleton('W12A', 7, 0), ...DEFAULT_W12A_PN]
     default:     return []
   }
 }
