@@ -53,13 +53,15 @@ export function yearsOfService(startDate: string, refYearBE = 2569, refMonth = 7
   return (refYearBE - y) + (refMonth - m) / 12
 }
 
-/** RN level position จากวันเริ่มงาน — สำหรับ IPD ward */
-export function rnLevelFromStartDate(startDate: string, refYearBE = 2569, refMonth = 7): NursePosition | null {
-  const yrs = yearsOfService(startDate, refYearBE, refMonth)
-  if (yrs == null) return null
-  if (yrs < 2) return 'RN1'   // level 1
-  if (yrs <= 4) return 'RN2'  // level 2
-  return 'RN3'                // level 3
+/** RN level position จากวันเริ่มงาน — สำหรับ IPD ward
+ *  นับตามปี (พ.ศ.อ้างอิง − พ.ศ.เริ่มงาน) ให้ตรงกับ Lv ที่วอร์ดใช้ เช่น เข้า 2567 = ปีที่ 2 = L2 */
+export function rnLevelFromStartDate(startDate: string, refYearBE = 2569): NursePosition | null {
+  const y = parseBEYear(startDate)
+  if (y == null) return null
+  const yrs = refYearBE - y
+  if (yrs < 2) return 'RN1'   // level 1: < 2 ปี
+  if (yrs <= 4) return 'RN2'  // level 2: 2-4 ปี
+  return 'RN3'                // level 3: > 4 ปี
 }
 
 /** ป้าย level แบบสั้นสำหรับแสดงผล */
